@@ -7,6 +7,12 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    :root {
+      --card-w: 44px;
+      --card-h: 63px;
+      --table-peek: 6px;
+    }
+
     body {
       font-family: "Segoe UI", Arial, sans-serif;
       background: #1a6b3a;
@@ -51,7 +57,7 @@
     .card-row { display: flex; flex-wrap: wrap; gap: 5px; min-height: 62px; align-items: flex-end; }
 
     .card {
-      width: 44px; height: 63px; border-radius: 5px; border: 2px solid #fff;
+      width: var(--card-w); height: var(--card-h); border-radius: 5px; border: 2px solid #fff;
       display: flex; flex-direction: column; justify-content: space-between;
       padding: 2px 3px; font-size: 0.75rem; font-weight: bold; cursor: default;
       user-select: none; position: relative; background: #fff; color: #222;
@@ -78,6 +84,29 @@
     }
     .card.empty {
       background: rgba(255,255,255,0.07); border: 2px dashed rgba(255,255,255,0.3); color: transparent;
+    }
+
+    .table-row {
+      min-height: calc(var(--card-h) + var(--table-peek));
+    }
+    .table-slot {
+      position: relative;
+      width: var(--card-w);
+      height: calc(var(--card-h) + var(--table-peek));
+      flex: 0 0 var(--card-w);
+    }
+    .table-slot .card {
+      position: absolute;
+      left: 0;
+      bottom: var(--table-peek);
+    }
+    .table-slot .under-card {
+      bottom: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .table-slot .face-card {
+      z-index: 1;
     }
 
     /* ===== 出牌区 ===== */
@@ -134,7 +163,8 @@
     }
 
     @media (max-width: 480px) {
-      .card { width: 36px; height: 54px; font-size: 0.65rem; }
+      :root { --card-w: 36px; --card-h: 54px; --table-peek: 5px; }
+      .card { font-size: 0.65rem; }
       .card .suit { font-size: 0.85rem; }
     }
   </style>
@@ -150,9 +180,7 @@
     <div class="row-label">手牌（AI，牌面朝下）</div>
     <div class="card-row" id="hand-p2"></div>
     <div class="row-label">桌面明牌</div>
-    <div class="card-row" id="face-p2"></div>
-    <div class="row-label">桌面底牌</div>
-    <div class="card-row" id="down-p2"></div>
+    <div class="card-row table-row" id="face-p2"></div>
     <div class="info-row" id="info-p2"></div>
   </div>
 
@@ -184,10 +212,8 @@
   <!-- 玩家1（你） -->
   <div class="player-zone" id="zone-p1">
     <h2>🧑 玩家1（你） <span id="badge-p1" class="badge" style="display:none">先手</span></h2>
-    <div class="row-label">桌面底牌</div>
-    <div class="card-row" id="down-p1"></div>
     <div class="row-label">桌面明牌（点击选择）</div>
-    <div class="card-row" id="face-p1"></div>
+    <div class="card-row table-row" id="face-p1"></div>
     <div class="row-label">手牌（点击选择）</div>
     <div class="card-row" id="hand-p1"></div>
     <div class="info-row" id="info-p1"></div>
@@ -475,30 +501,23 @@
         playableSet = new Set(getPlayableCards(p, leadCard).map(pc => `${pc.type}-${pc.index}`));
       }
 
-      const downEl = document.getElementById(`down-${pid}`);
-      downEl.innerHTML = '';
-      for (let i = 0; i < 10; i++) {
-        downEl.appendChild(p.table[i].down ? makeCardEl(p.table[i].down, { fd: true }) : makeEmptyEl());
-      }
-
       const faceEl = document.getElementById(`face-${pid}`);
       faceEl.innerHTML = '';
       for (let i = 0; i < 10; i++) {
-        if (p.table[i].face) {
-          const canSel = playableSet && playableSet.has(`face-${i}`);
-          const el = makeCardEl(p.table[i].face, canSel ? { sel: true } : {});
-          if (canSel) {
-            const isSel = state.selectedSource && state.selectedSource.type === 'face' && state.selectedSource.index === i;
-            if (isSel) el.classList.add('selected');
-            const fi = i;
-            el.addEventListener('click', () => {
-              if (state.phase !== 'select') return;
-              state.selectedSource = (isSel) ? null : { type: 'face', index: fi };
-              render();
-            });
-          }
-          faceEl.appendChild(el);
-        } else faceEl.appendChild(makeEmptyEl());
+        const slot = p.table[i];
+        const canSel = slot.face && playableSet && playableSet.has(`face-${i}`);
+        const tableSlot = makeTableSlotEl(slot, canSel ? { sel: true } : {});
+        if (canSel) {
+          const isSel = state.selectedSource && state.selectedSource.type === 'face' && state.selectedSource.index === i;
+          if (isSel) tableSlot.faceEl.classList.add('selected');
+          const fi = i;
+          tableSlot.faceEl.addEventListener('click', () => {
+            if (state.phase !== 'select') return;
+            state.selectedSource = (isSel) ? null : { type: 'face', index: fi };
+            render();
+          });
+        }
+        faceEl.appendChild(tableSlot.el);
       }
 
       const handEl = document.getElementById(`hand-${pid}`);
@@ -615,6 +634,23 @@
         el.innerHTML = `<span class="top">${card.rank}</span><span class="suit">${card.suit}</span><span class="bottom">${card.rank}</span>`;
       }
       return el;
+    }
+
+    function makeTableSlotEl(slot, faceOpts = {}) {
+      const el = document.createElement('div');
+      el.classList.add('table-slot');
+
+      if (slot.down) {
+        const underCard = makeCardEl(slot.down, { fd: true });
+        underCard.classList.add('under-card');
+        el.appendChild(underCard);
+      }
+
+      const faceEl = slot.face ? makeCardEl(slot.face, faceOpts) : makeEmptyEl();
+      faceEl.classList.add('face-card');
+      el.appendChild(faceEl);
+
+      return { el, faceEl };
     }
 
     function makeEmptyEl() {
