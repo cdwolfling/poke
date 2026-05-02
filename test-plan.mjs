@@ -45,8 +45,8 @@ const TESTS = [
     id: 3,
     name: 'V3(online) vs V3(high)',
     pairs: [
-      { label: 'V3(online) vs V3(high)', p1: 'V3', p2: 'V3' },
-      { label: 'V3(high) vs V3(online)（换位）', p1: 'V3', p2: 'V3' },
+      { label: 'V3(online) vs V3(high)', p1: 'V3', p2: 'V3-high' },
+      { label: 'V3(high) vs V3(online)（换位）', p1: 'V3-high', p2: 'V3' },
     ],
     timeLimit: 300,    // 5 小时
     v3Config: { sampleCount: 50, depth: 4, timeLimitMs: 500 },

@@ -5,11 +5,13 @@
 import { chooseCard as easyChoose } from './easyBot.js';
 import { chooseCard as normalChoose } from './normalBot.js';
 import { chooseCard as V3Choose } from './V3-search.js';
+import { chooseCard as V3HighChoose } from './V3-high.js';
 
 const BOT_STRATEGIES = {
   V1: easyChoose,
   V2: normalChoose,
   V3: V3Choose,
+  'V3-high': V3HighChoose,
 };
 
 /**
