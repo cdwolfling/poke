@@ -443,7 +443,7 @@
   </div>
 
   <script>
-    const VERSION = '2026.5.2.0';
+    const VERSION = '2026.5.2.1';
     const SUITS = ['♠','♥','♦','♣'];
     const SUIT_COLOR = { '♠':'black', '♣':'dark', '♥':'pink', '♦':'red' };
     const TOTAL_ROUNDS = 27;
@@ -560,28 +560,40 @@
       return best;
     }
 
-    // ★★★ AI 选牌（抢分与安全出分优先） ★★★
+    // ★★★ AI 选牌（只使用牌桌可见信息） ★★★
+    // 不再窥探对手手牌，仅基于已知牌面、天龙人花色做决策
     function aiChooseCard(player, leadCard, opponent = null) {
       const playable = getPlayableCards(player, leadCard);
       if (playable.length === 0) return null;
 
       if (leadCard) {
+        // 跟牌：leadCard 可见，据此决策
         const winners = playable.filter(a => canSecondCardWin(leadCard, a.card));
         const scoreWinners = winners.filter(a => getCardScore(a.card) > 0);
 
-        // 人类先出分数牌时，只要 AI 能赢，就压上去把这一轮分拿下。
+        // 敌方先出分牌，能赢就压
         if (getCardScore(leadCard) > 0 && winners.length > 0) {
           return scoreWinners.length > 0 ? chooseLowestScoreCard(scoreWinners) : chooseLowestPower(winners);
         }
 
-        // AI 自己要出分数牌时，尽量只在能赢下这一轮时出。
+        // 自己出分牌，只在能赢这轮时出
         if (scoreWinners.length > 0) return chooseLowestScoreCard(scoreWinners);
-      } else if (opponent) {
-        const safeScoreCards = playable.filter(a => getCardScore(a.card) > 0 && canLeadCardHold(a.card, opponent));
-        if (safeScoreCards.length > 0) return chooseLowestScoreCard(safeScoreCards);
+      } else {
+        // 先手出牌：不使用对手手牌信息（修复窥牌 bug）
+        const privileged = playable.filter(a => isPrivileged(a.card));
+        const scoreCards = playable.filter(a => getCardScore(a.card) > 0);
+
+        // 优先出天龙人花色里的分数牌（已知安全）
+        const privScore = privileged.filter(a => getCardScore(a.card) > 0);
+        if (privScore.length > 0) return chooseLowestScoreCard(privScore);
+
+        // 如果只剩分数牌可出了，出最小的
+        if (scoreCards.length > 0 && scoreCards.length === playable.length) {
+          return chooseLowestScoreCard(scoreCards);
+        }
       }
 
-      // 默认：出最小非分数牌；不得不出分时，再出最小分数牌。
+      // 默认：出最小非分数牌；不得不出分时，出最小分数牌
       const nonScoreCards = playable.filter(a => getCardScore(a.card) === 0);
       return chooseLowestPower(nonScoreCards.length > 0 ? nonScoreCards : playable);
     }
