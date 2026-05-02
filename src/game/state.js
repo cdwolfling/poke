@@ -54,7 +54,6 @@ function createState(strategies = { p1: 'V1', p2: 'V2' }) {
     history: [],               // Last 3 rounds [{ round, p1: Card, p2: Card, winner, points }]
     selectedSource: null,      // Currently selected card in UI (Move | null)
     strategies: { ...strategies },
-    _deckSeed: deck,           // Keep for reproducibility/debugging
   };
 }
 
