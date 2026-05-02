@@ -4,7 +4,7 @@
 
 import { createDeck, shuffleDeck, dealCards } from './deck.js';
 import { getCardScore, RANK_ORDER, TOTAL_ROUNDS, isJoker } from './card.js';
-import { compareCards, determineDragonSuit } from './rules.js';
+import { compareCards, determineDragonSuit, getAvailableCards } from './rules.js';
 
 /**
  * Move type: { type: 'hand'|'face', index: number }
@@ -236,7 +236,10 @@ function advanceRound(state) {
  * @returns {boolean}
  */
 function isTerminal(state) {
-  return state.phase === 'gameover' || state.round > TOTAL_ROUNDS;
+  if (state.phase === 'gameover') return true;
+  if (state.round > TOTAL_ROUNDS) return true;
+  // 一方无牌可出时游戏提前结束（getAvailableCards 含手牌+桌面明牌）
+  return getAvailableCards(state.p1).length === 0 || getAvailableCards(state.p2).length === 0;
 }
 
 /**
