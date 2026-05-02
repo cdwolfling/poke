@@ -25,10 +25,10 @@ import { cloneState, applyMove, resolveRound, advanceRound, isTerminal } from '.
 // ── 配置 ──────────────────────────────────────────────────────
 
 const V3_CONFIG = {
-  sampleCount: 100,     // 采样世界数
-  depth: 6,             // 搜索深度（ply）
-  timeLimitMs: 1000,    // 每步时间上限
-  endgameDepth: 8,      // 残局深度
+  sampleCount: 50,      // 采样世界数（线上用 50，批量测试可调高）
+  depth: 4,             // 搜索深度（ply，线上 4ply ≈ 0.5s）
+  timeLimitMs: 500,     // 每步时间上限
+  endgameDepth: 6,      // 残局深度
   endgameThreshold: 5,  // 剩余 ≤ 5 轮进入残局模式
 };
 

@@ -17,7 +17,7 @@ let autoAdvanceTimer = null;
 // ── Init ─────────────────────────────────────────────────────────
 function initGame() {
   if (autoAdvanceTimer) { clearTimeout(autoAdvanceTimer); autoAdvanceTimer = null; }
-  state = createState({ p1: 'V1', p2: 'V2' });
+  state = createState({ p1: 'V1', p2: 'V3' });
   document.getElementById('btn-play').disabled = true;
   renderAll();
 }
