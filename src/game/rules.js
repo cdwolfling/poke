@@ -39,7 +39,7 @@ function getLegalMoves(player, leadCard, dragonSuit) {
 
   const leadSuit = getEffectiveSuit(leadCard, dragonSuit);
   const sameSuit = available.filter(a =>
-    getEffectiveSuit(a.card, dragonSuit) === leadSuit && !isJoker(a.card)
+    getEffectiveSuit(a.card, dragonSuit) === leadSuit
   );
 
   if (sameSuit.length > 0) return sameSuit;
