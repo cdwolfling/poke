@@ -8,7 +8,7 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --card-w: clamp(50px, 3.8vw, 66px);
+      --card-w: clamp(54px, 3.4vw, 76px);
       --card-h: calc(var(--card-w) * 1.42);
       --table-peek: clamp(6px, 0.55vw, 9px);
       --card-gap: clamp(5px, 0.45vw, 8px);
@@ -40,7 +40,7 @@
       display: flex;
       flex-direction: column;
       align-items: stretch;
-      gap: 7px;
+      gap: 6px;
       min-width: 0;
     }
     #side-panel {
@@ -80,18 +80,28 @@
     }
 
     .player-zone {
-      background: rgba(0,0,0,0.3); border-radius: 8px; padding: 8px 10px;
+      background: rgba(0,0,0,0.3); border-radius: 8px; padding: 6px 10px;
       width: 100%;
     }
-    .player-zone h2 { font-size: 0.86rem; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+    .player-zone h2 { font-size: 0.86rem; margin-bottom: 3px; display: flex; align-items: center; gap: 6px; }
     .player-content {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) clamp(86px, 6.6vw, 118px);
-      gap: 10px;
+      grid-template-columns: minmax(0, 1fr) clamp(72px, 5.4vw, 112px);
+      gap: 8px;
       align-items: stretch;
       min-width: 0;
     }
     .player-board { min-width: 0; }
+    .hand-action-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      min-width: 0;
+    }
+    .hand-board {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
     .badge { font-size: 0.7rem; padding: 2px 8px; border-radius: 12px; background: #e67e22; color: #fff; }
 
     .row-label { font-size: 0.72rem; color: #bbb; margin-bottom: 2px; margin-top: 3px; }
@@ -168,10 +178,10 @@
       min-width: 0;
     }
     .score-pile {
-      width: 94px;
-      min-height: 132px;
+      width: clamp(70px, 4.8vw, 94px);
+      min-height: 120px;
       padding-top: 14px;
-      flex: 0 0 94px;
+      flex: 0 0 clamp(70px, 4.8vw, 94px);
     }
     .score-pile-title {
       font-size: 0.7rem;
@@ -220,7 +230,7 @@
       gap: 7px;
       min-width: 0;
       min-height: 100%;
-      padding: 8px 6px;
+      padding: 7px 5px;
       border-radius: 8px;
       background: rgba(0,0,0,0.18);
       border: 1px solid rgba(255,255,255,0.1);
@@ -251,7 +261,13 @@
     }
     button:hover:not(:disabled) { opacity: 0.85; transform: scale(1.04); }
     button:disabled { opacity: 0.4; cursor: not-allowed; }
-    #btn-play   { background: #f1c40f; color: #1a1a1a; }
+    #btn-play {
+      flex: 0 0 clamp(78px, 5vw, 112px);
+      height: var(--card-h);
+      align-self: flex-end;
+      background: #f1c40f;
+      color: #1a1a1a;
+    }
     #btn-restart{ background: #e74c3c; color: #fff; }
 
     .info-row { font-size: 0.74rem; color: #aee; margin-top: 3px; }
@@ -291,6 +307,8 @@
       .card { font-size: 0.68rem; padding: 2px 3px; }
       .card .suit { font-size: 0.88rem; }
       .player-content { grid-template-columns: minmax(0, 1fr) 62px; gap: 6px; }
+      .hand-action-row { gap: 6px; }
+      #btn-play { flex-basis: 58px; font-size: 0.78rem; padding: 6px 4px; }
       .played-panel { padding: 6px 4px; }
       .table-area { flex-direction: column; gap: 5px; }
       .table-row { grid-template-columns: repeat(8, minmax(0, 1fr)); }
@@ -304,7 +322,7 @@
     @media (max-width: 360px) {
       .table-row { grid-template-columns: repeat(6, minmax(0, 1fr)); }
     }
-    @media (max-width: 960px) {
+    @media (max-width: 1100px) {
       #game-layout { display: flex; flex-direction: column; align-items: center; }
       #game-main, #side-panel { width: 100%; max-width: 940px; position: static; }
       #game-main { order: 1; }
@@ -325,11 +343,9 @@
     <h2>🤖 玩家2（AI） <span id="badge-p2" class="badge" style="display:none">先手</span></h2>
     <div class="player-content">
     <div class="player-board">
-    <div class="row-label">手牌（AI，牌面朝下）</div>
     <div class="card-row" id="hand-p2"></div>
     <div class="table-area">
       <div class="table-board">
-        <div class="row-label">桌面牌</div>
         <div class="card-row table-row" id="face-p2"></div>
       </div>
       <div class="score-pile" id="score-pile-p2"></div>
@@ -356,7 +372,12 @@
       <div class="score-pile" id="score-pile-p1"></div>
     </div>
     <div class="row-label">手牌（点击选择）</div>
-    <div class="card-row" id="hand-p1"></div>
+    <div class="hand-action-row">
+      <div class="hand-board">
+        <div class="card-row" id="hand-p1"></div>
+      </div>
+      <button id="btn-play" disabled>出牌</button>
+    </div>
     <div class="info-row" id="info-p1"></div>
     </div>
     <div class="played-panel">
@@ -372,7 +393,6 @@
       <div id="result-banner">——</div>
       <div id="status-bar">等待开始……</div>
       <div id="btn-area">
-        <button id="btn-play" disabled>出牌</button>
         <button id="btn-restart">重新开始</button>
       </div>
     </div>
