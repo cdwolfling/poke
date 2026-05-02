@@ -6,19 +6,20 @@ import { runTournament } from './src/eval/tournament.js';
 import { formatReport } from './src/eval/report.js';
 import { V3_CONFIG } from './src/ai/V3-search.js';
 
-const LOG = `results/test-${new Date().toISOString().slice(0,16).replace('T','-')}.log`;
-const logStream = fs.createWriteStream(LOG, {flags:'a'});
+const MAIN_LOG = 'results/run.log';
+const DETAIL_LOG = `results/test-${new Date().toISOString().slice(0,16).replace('T','-')}.log`;
 
 function out(msg) {
   const t = new Date().toISOString().slice(11,19);
   const line = `[${t}] ${msg}`;
-  console.log(line);
-  logStream.write(line + '\n');
+  process.stdout.write(line + '\n');  // unbuffered
+  fs.appendFileSync(MAIN_LOG, line + '\n');
+  fs.appendFileSync(DETAIL_LOG, line + '\n');
 }
 
 out('='.repeat(66));
 out('AI 策略自动化测试 — 开始');
-out(`日志: ${LOG}`);
+out(`日志: ${DETAIL_LOG}`);
 out('='.repeat(66));
 
 // 配置 V3(online) 参数
@@ -89,4 +90,4 @@ out('所有测试完成！');
 out(`总耗时: ${(elapsed()/60000).toFixed(0)} 分钟`);
 out('='.repeat(66));
 
-logStream.end();
+
