@@ -177,6 +177,36 @@
       width: 100%;
       min-width: 0;
     }
+    .ai-hand-panel {
+      flex: 0 0 clamp(54px, 3.8vw, 70px);
+      min-height: calc(var(--card-h) + 22px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      padding-top: 2px;
+    }
+    .ai-hand-stack {
+      position: relative;
+      width: clamp(46px, 3.3vw, 58px);
+      height: calc(var(--card-h) * 0.7 + 26px);
+    }
+    .ai-hand-stack .card {
+      position: absolute;
+      left: calc(var(--stack-i) * 4px);
+      top: calc(var(--stack-i) * 3px);
+      transform: scale(0.58);
+      transform-origin: top left;
+      z-index: var(--stack-i);
+      box-shadow: 0 3px 8px rgba(0,0,0,0.25);
+      transition: none;
+    }
+    .ai-hand-count {
+      font-size: 0.68rem;
+      color: #aee;
+      line-height: 1;
+      white-space: nowrap;
+    }
     .score-pile {
       width: clamp(70px, 4.8vw, 94px);
       min-height: 120px;
@@ -311,6 +341,11 @@
       #btn-play { flex-basis: 58px; font-size: 0.78rem; padding: 6px 4px; }
       .played-panel { padding: 6px 4px; }
       .table-area { flex-direction: column; gap: 5px; }
+      .ai-table-area { flex-direction: row; }
+      .ai-hand-panel { flex-basis: 48px; min-height: 70px; }
+      .ai-hand-stack { width: 42px; height: 58px; }
+      .ai-hand-stack .card { left: calc(var(--stack-i) * 3px); top: calc(var(--stack-i) * 2px); transform: scale(0.52); }
+      .ai-table-area .score-pile { width: 54px; min-height: 70px; flex: 0 0 54px; padding-top: 0; }
       .table-row { grid-template-columns: repeat(8, minmax(0, 1fr)); }
       .table-slot { justify-self: start; }
       .score-pile { width: 100%; min-height: 62px; flex-basis: auto; padding-top: 0; }
@@ -343,10 +378,13 @@
     <h2>🤖 玩家2（AI） <span id="badge-p2" class="badge" style="display:none">先手</span></h2>
     <div class="player-content">
     <div class="player-board">
-    <div class="card-row" id="hand-p2"></div>
-    <div class="table-area">
+    <div class="table-area ai-table-area">
       <div class="table-board">
         <div class="card-row table-row" id="face-p2"></div>
+      </div>
+      <div class="ai-hand-panel">
+        <div class="ai-hand-stack" id="hand-p2"></div>
+        <div class="ai-hand-count" id="hand-count-p2">7张</div>
       </div>
       <div class="score-pile" id="score-pile-p2"></div>
     </div>
@@ -754,7 +792,13 @@
           handEl.appendChild(el);
         });
       } else {
-        p.hand.forEach(() => handEl.appendChild(makeCardEl(null, { fd: true })));
+        p.hand.forEach((_, idx) => {
+          const el = makeCardEl(null, { fd: true });
+          el.style.setProperty('--stack-i', idx);
+          handEl.appendChild(el);
+        });
+        const countEl = document.getElementById('hand-count-p2');
+        if (countEl) countEl.textContent = `${p.hand.length}张`;
       }
 
       const badge = document.getElementById(`badge-${pid}`);
