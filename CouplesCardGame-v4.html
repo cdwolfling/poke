@@ -8,7 +8,7 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --card-w: clamp(54px, 3.4vw, 76px);
+      --card-w: clamp(54px, 4vw, 86px);
       --card-h: calc(var(--card-w) * 1.42);
       --table-peek: clamp(6px, 0.55vw, 9px);
       --card-gap: clamp(5px, 0.45vw, 8px);
@@ -86,7 +86,7 @@
     .player-zone h2 { font-size: 0.86rem; margin-bottom: 3px; display: flex; align-items: center; gap: 6px; }
     .player-content {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) clamp(72px, 5.4vw, 112px);
+      grid-template-columns: minmax(0, 1fr) clamp(100px, 8vw, 140px);
       gap: 8px;
       align-items: stretch;
       min-width: 0;
@@ -121,9 +121,9 @@
       background: repeating-linear-gradient(45deg, #1a3a6b, #1a3a6b 5px, #1e4080 5px, #1e4080 10px);
       border-color: #aaa; color: transparent;
     }
-    .card .top { align-self: flex-start; line-height: 1; }
-    .card .suit { font-size: clamp(1.05rem, 1vw, 1.35rem); align-self: center; }
-    .card .bottom { align-self: flex-end; line-height: 1; transform: rotate(180deg); }
+    .card .top { align-self: flex-start; line-height: 1; font-size: clamp(1.01rem, 0.94vw, 1.3rem); }
+    .card .suit { font-size: clamp(2.1rem, 2vw, 2.7rem); align-self: center; }
+    .card .bottom { align-self: flex-end; line-height: 1; transform: rotate(180deg); font-size: clamp(1.01rem, 0.94vw, 1.3rem); }
     .card.selectable { cursor: pointer; border-color: #f1c40f; }
     .card.selectable:hover { transform: translateY(-5px); box-shadow: 0 6px 16px rgba(0,0,0,0.5); }
     .card.selected {
@@ -150,14 +150,17 @@
     .table-area {
       display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
     }
+    .ai-table-area {
+      display: flex; align-items: flex-start; gap: 8px;
+    }
     .table-board { flex: 1 1 0; width: 100%; min-width: 0; }
     .ai-hand-panel {
-      flex: 0 0 clamp(54px, 3.8vw, 70px);
+      flex: 0 0 clamp(54px, 4vw, 76px);
       min-height: calc(var(--card-h) + 22px);
       display: flex; flex-direction: column; align-items: center; gap: 3px; padding-top: 2px;
     }
     .ai-hand-stack {
-      position: relative; width: clamp(46px, 3.3vw, 58px);
+      position: relative; width: clamp(46px, 3.8vw, 66px);
       height: calc(var(--card-h) * 0.7 + 26px);
     }
     .ai-hand-stack .card {
@@ -281,30 +284,23 @@
         <h2>🤖 玩家2（AI） <span id="badge-p2" class="badge" style="display:none">先手</span></h2>
         <div class="player-content">
           <div class="player-board">
-            <div class="row-label">桌面明牌</div>
-            <div class="card-row table-row" id="face-p2"></div>
-            <div class="row-label">手牌</div>
-            <div class="table-area">
+            <div class="table-area ai-table-area">
+              <div class="table-board">
+                <div class="row-label">桌面明牌</div>
+                <div class="card-row table-row" id="face-p2"></div>
+              </div>
               <div class="ai-hand-panel">
                 <div class="ai-hand-stack" id="hand-p2"></div>
                 <div class="ai-hand-count" id="hand-count-p2">7张</div>
               </div>
+              <div class="score-pile" id="score-pile-p2"></div>
             </div>
+            <div class="info-row" id="info-p2"></div>
           </div>
-          <div class="score-pile" id="score-pile-p2"></div>
-        </div>
-        <div class="info-row" id="info-p2"></div>
-      </div>
-
-      <!-- Table (played cards) -->
-      <div class="table-area">
-        <div class="played-panel" style="flex:1">
-          <div class="played-title">🤖 AI 出牌</div>
-          <div id="played-p2"></div>
-        </div>
-        <div class="played-panel" style="flex:1">
-          <div class="played-title">🧑 你出牌</div>
-          <div id="played-p1"></div>
+          <div class="played-panel">
+            <div class="played-title">AI 出牌</div>
+            <div id="played-p2"></div>
+          </div>
         </div>
       </div>
 
@@ -313,19 +309,27 @@
         <h2>🧑 玩家1（你） <span id="badge-p1" class="badge" style="display:none">先手</span></h2>
         <div class="player-content">
           <div class="player-board">
-            <div class="row-label">桌面明牌</div>
-            <div class="card-row table-row" id="face-p1"></div>
-            <div class="row-label">手牌</div>
+            <div class="table-area">
+              <div class="table-board">
+                <div class="row-label">桌面牌（点击选择）</div>
+                <div class="card-row table-row" id="face-p1"></div>
+              </div>
+              <div class="score-pile" id="score-pile-p1"></div>
+            </div>
+            <div class="row-label">手牌（点击选择）</div>
             <div class="hand-action-row">
               <div class="hand-board">
                 <div class="card-row" id="hand-p1"></div>
               </div>
               <button id="btn-play" disabled>出牌</button>
             </div>
+            <div class="info-row" id="info-p1"></div>
           </div>
-          <div class="score-pile" id="score-pile-p1"></div>
+          <div class="played-panel">
+            <div class="played-title">你出牌</div>
+            <div id="played-p1"></div>
+          </div>
         </div>
-        <div class="info-row" id="info-p1"></div>
       </div>
     </main>
 
@@ -344,7 +348,7 @@
   <script>
 // ════════════════════════════════════════════════════
 // 扑克牌对战 — 独立捆绑包
-// Built: 2026-05-03 08:55:39
+// Built: 2026-05-03 09:11:47
 // ════════════════════════════════════════════════════
 
 // ── src/game/card.js ──────────────────────────────────────
@@ -874,6 +878,18 @@ function advanceRound(state) {
     if (ns.p2.table[idx] && ns.p2.table[idx].down) {
       ns.p2.table[idx].face = ns.p2.table[idx].down;
       ns.p2.table[idx].down = null;
+    }
+  }
+
+  // If hand is empty, flip all remaining down cards to face-up
+  for (const pid of ['p1', 'p2']) {
+    if (ns[pid].hand.length === 0) {
+      for (const slot of ns[pid].table) {
+        if (slot.down && !slot.face) {
+          slot.face = slot.down;
+          slot.down = null;
+        }
+      }
     }
   }
 
@@ -2332,7 +2348,7 @@ function renderAll() {
   renderStatus();
   renderButtons();
   renderHistory();
-  document.querySelector('h1 .ver').textContent = 'v2026.5.4.1';
+  document.querySelector('h1 .ver').textContent = 'v2026.5.3.2';
 }
 
 function renderDragonInfo() {
