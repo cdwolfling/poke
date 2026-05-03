@@ -26,6 +26,7 @@ const MODULES = [
   'src/ai/normalBot.js',
   'src/ai/V3-search.js',
   'src/ai/V3-high.js',
+  'src/ai/V4.js',
   'src/ai/bot.js',
   'src/ui/adapter.js',
 ];

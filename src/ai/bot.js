@@ -6,12 +6,14 @@ import { easyChoose } from './easyBot.js';
 import { normalChoose } from './normalBot.js';
 import { V3Choose } from './V3-search.js';
 import { V3HighChoose } from './V3-high.js';
+import { V4Choose } from './V4.js';
 
 const BOT_STRATEGIES = {
   V1: easyChoose,
   V2: normalChoose,
   V3: V3Choose,
   'V3-high': V3HighChoose,
+  V4: V4Choose,
 };
 
 /**
