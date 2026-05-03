@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>夫妻牌</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --card-w: clamp(90px, 8vw, 120px);
+      --card-h: calc(var(--card-w) * 1.28);
+      --table-peek: clamp(8px, 0.7vw, 12px);
+      --card-gap: clamp(6px, 0.5vw, 10px);
+    }
+
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: #1a6b3a;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 8px 10px;
+      gap: 8px;
+      overflow-x: hidden;
+    }
+
+    #game-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) clamp(230px, 16vw, 300px);
+      gap: 10px;
+      align-items: start;
+      width: 100%;
+      max-width: 1840px;
+      min-width: 0;
+    }
+    #game-main {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 6px;
+      min-width: 0;
+    }
+    #side-panel {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      position: sticky;
+      top: 8px;
+    }
+    #side-panel h1 {
+      font-size: clamp(1.1rem, 1.1vw, 1.5rem); text-shadow: 1px 1px 3px #000;
+      display: flex; align-items: center; gap: 6px;
+      justify-content: center; margin-bottom: 2px;
+    }
+    #round-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    #side-panel h1 .ver {
+      font-size: 0.6rem; color: #aaa; font-weight: normal;
+      background: rgba(255,255,255,0.1); border-radius: 4px; padding: 2px 5px;
+    }
+
+    #status-bar {
+      background: rgba(0,0,0,0.45); border-radius: 8px; padding: 7px 9px;
+      font-size: 0.78rem; line-height: 1.35; text-align: left; width: 100%;
+    }
+
+    #dragon-info {
+      background: rgba(241,196,15,0.15); border: 1px solid #f1c40f;
+      border-radius: 8px; padding: 4px 8px; font-size: 0.72rem;
+      text-align: center; color: #f1c40f; width: 100%;
+      overflow-wrap: anywhere;
+    }
+
+    .player-zone {
+      background: rgba(0,0,0,0.3); border-radius: 8px; padding: 6px 10px;
+      width: 100%;
+    }
+    .player-zone h2 { font-size: 0.86rem; margin-bottom: 3px; display: flex; align-items: center; gap: 6px; }
+    .player-content {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) clamp(150px, 12vw, 210px);
+      gap: 8px;
+      align-items: stretch;
+      min-width: 0;
+    }
+    .player-board { min-width: 0; }
+    .hand-area {
+      margin-top: 4px; padding: 6px 10px;
+      background: rgba(0,0,0,0.15); border-radius: 8px;
+    }
+    .hand-action-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      min-width: 0;
+    }
+    .hand-board { flex: 1 1 auto; min-width: 0; }
+    .badge { font-size: 0.7rem; padding: 2px 8px; border-radius: 12px; background: #e67e22; color: #fff; }
+
+    .row-label { font-size: 0.72rem; color: #bbb; margin-bottom: 2px; margin-top: 3px; }
+    .card-row { display: flex; flex-wrap: wrap; gap: var(--card-gap); min-height: var(--card-h); align-items: flex-end; }
+
+    .card {
+      width: var(--card-w); height: var(--card-h); border-radius: 5px; border: 2px solid #fff;
+      display: flex; flex-direction: column; justify-content: space-between;
+      padding: 4px 5px; font-size: clamp(0.9rem, 0.85vw, 1.15rem); font-weight: bold; cursor: default;
+      user-select: none; position: relative; background: #fff; color: #222;
+      transition: transform 0.15s, box-shadow 0.15s; flex-shrink: 0;
+    }
+    .card.red { color: #c0392b; }
+    .card.pink { color: #d63384; }
+    .card.black { color: #1a1a1a; }
+    .card.dark { color: #1a5b3a; }
+    .card.joker-big { color: #c0392b; background: linear-gradient(135deg,#fff 60%,#ffecd2); }
+    .card.joker-small { color: #1a1a1a; background: linear-gradient(135deg,#fff 60%,#d5e8d4); }
+    .card.face-down {
+      background: repeating-linear-gradient(45deg, #1a3a6b, #1a3a6b 5px, #1e4080 5px, #1e4080 10px);
+      border-color: #aaa; color: transparent;
+    }
+    .hand-overlap {
+      display: flex; flex-wrap: nowrap;
+    }
+    .hand-overlap .card {
+      margin-left: calc(var(--card-w) * -0.4);
+    }
+    .hand-overlap .card:first-child {
+      margin-left: 0;
+    }
+
+    .card .top { align-self: flex-start; line-height: 1; font-size: clamp(1.56rem, 1.44vw, 1.98rem); }
+    .card .suit { font-size: clamp(3.12rem, 3vw, 3.96rem); align-self: center; }
+    .card .bottom { align-self: flex-end; line-height: 1; transform: rotate(180deg); font-size: clamp(1.56rem, 1.44vw, 1.98rem); }
+    .card.selectable { cursor: pointer; border-color: #f1c40f; }
+    .card.selectable:hover { transform: translateY(-5px); box-shadow: 0 6px 16px rgba(0,0,0,0.5); }
+    .card.selected {
+      transform: translateY(-8px); box-shadow: 0 8px 20px rgba(241,196,15,0.8);
+      border-color: #f1c40f; border-width: 3px;
+    }
+    .card.empty {
+      background: rgba(255,255,255,0.07); border: 2px dashed rgba(255,255,255,0.3); color: transparent;
+    }
+
+    .table-row {
+      display: flex; flex-wrap: wrap; gap: var(--card-gap);
+      width: 100%; max-width: calc(var(--card-w) * 5 + var(--card-gap) * 4);
+      min-height: calc((var(--card-h) + var(--table-peek)) * 2);
+    }
+    .table-slot {
+      position: relative; width: var(--card-w);
+      height: calc(var(--card-h) + var(--table-peek));
+      flex: 0 0 var(--card-w);
+    }
+    .table-slot .card { position: absolute; left: 0; }
+    .table-slot .under-card { bottom: 0; z-index: 0; pointer-events: none; }
+    .table-slot .face-card { bottom: var(--table-peek); z-index: 1; }
+
+    .table-area {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
+    }
+    .ai-table-area {
+      display: flex; align-items: flex-start; gap: 8px;
+    }
+    .table-board { flex: 1 1 0; width: 100%; min-width: 0; }
+    .ai-hand-panel {
+      flex: 0 0 clamp(81px, 6vw, 114px);
+      min-height: calc(var(--card-h) + 22px);
+      display: flex; flex-direction: column; align-items: center; gap: 3px; padding-top: 2px;
+    }
+    .ai-hand-stack {
+      position: relative; width: clamp(46px, 3.8vw, 66px);
+      height: calc(var(--card-h) * 0.7 + 26px);
+    }
+    .ai-hand-stack .card {
+      position: absolute;
+      left: calc(var(--stack-i) * 4px);
+      top: calc(var(--stack-i) * 3px);
+      transform: scale(0.58);
+      transform-origin: top left;
+      z-index: var(--stack-i);
+      box-shadow: 0 3px 8px rgba(0,0,0,0.25);
+      transition: none;
+    }
+    .ai-hand-count { font-size: 0.68rem; color: #aee; line-height: 1; white-space: nowrap; }
+
+    .score-pile {
+      width: clamp(105px, 7.2vw, 141px); min-height: 200px; padding-top: 14px;
+      flex: 0 0 clamp(70px, 4.8vw, 94px);
+    }
+    .score-pile-title { font-size: 0.7rem; color: #f1c40f; text-align: center; margin-bottom: 3px; white-space: nowrap; }
+    .score-stack { position: relative; width: 100%; height: 150px; }
+    .score-stack .card {
+      position: absolute;
+      left: calc(10px + var(--stack-col) * 25px);
+      top: calc(var(--stack-row) * 11px);
+      transform: rotate(calc((var(--stack-col) * 2 - 1) * 2deg)) scale(0.62);
+      transform-origin: top center;
+      z-index: var(--stack-i);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.35);
+      transition: none;
+    }
+    .score-stack .card .top { font-size: 0.8rem; text-shadow: 0 0 1px rgba(255,255,255,0.75); }
+    .score-stack .card.empty { left: 50%; top: 0; transform: translateX(-50%) scale(0.72); box-shadow: none; }
+    .score-count { font-size: 0.68rem; color: #aee; text-align: center; line-height: 1.2; }
+
+    .played-panel {
+      display: flex; flex-direction: column; align-items: center; gap: 7px;
+      min-width: 0; min-height: 100%; padding: 7px 5px;
+      border-radius: 8px; background: rgba(0,0,0,0.18); border: 1px solid rgba(255,255,255,0.1);
+    }
+    .played-title { font-size: 0.72rem; color: #ddd; white-space: nowrap; }
+    .played-panel .card:not(.empty) {
+      opacity: 1 !important; filter: none !important; box-shadow: 0 5px 14px rgba(0,0,0,0.35);
+    }
+
+    #result-banner {
+      background: rgba(0,0,0,0.35); border-radius: 8px; padding: 10px 12px;
+      font-size: 1rem; font-weight: bold; text-align: left; min-height: 3rem;
+      line-height: 1.28; text-shadow: 1px 1px 4px #000;
+    }
+
+    #btn-area { display: flex; flex-direction: column; gap: 7px; }
+    button {
+      width: 100%; padding: 8px 10px; border: none; border-radius: 8px; font-size: 0.85rem;
+      font-weight: bold; cursor: pointer; transition: opacity 0.15s, transform 0.1s;
+    }
+    button:hover:not(:disabled) { opacity: 0.85; transform: scale(1.04); }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    #btn-play {
+      flex: 0 0 clamp(78px, 5vw, 112px); height: var(--card-h);
+      align-self: flex-end; background: #f1c40f; color: #1a1a1a;
+    }
+    #btn-restart { background: #e74c3c; color: #fff; }
+
+    .info-row { font-size: 0.74rem; color: #aee; margin-top: 3px; }
+
+    #history-panel {
+      background: rgba(0,0,0,0.35); border-radius: 8px; padding: 8px 10px;
+      width: 100%; font-size: 0.74rem;
+    }
+    #history-panel h3 {
+      font-size: 0.85rem; margin-bottom: 6px; color: #f1c40f; display: flex; align-items: center; gap: 6px;
+    }
+    .history-row {
+      display: flex; align-items: center; gap: 8px; padding: 3px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.08); flex-wrap: wrap;
+    }
+    .history-row .hr-round { min-width: 40px; color: #888; font-size: 0.7rem; }
+    .history-row .hr-card {
+      display: inline-flex; align-items: center; gap: 3px;
+      font-size: 0.78rem; font-weight: bold;
+      background: rgba(255,255,255,0.15); border-radius: 4px; padding: 1px 6px;
+    }
+    .history-row .hr-red { color: #ff6b6b; }
+    .history-row .hr-pink { color: #ff8ec7; }
+    .history-row .hr-black { color: #ddd; }
+    .history-row .hr-win  { color: #ffd700; font-weight: bold; min-width: 50px; }
+    .history-row .hr-lose { color: #ff6b6b; font-weight: bold; min-width: 50px; }
+    .history-row .hr-tie  { color: #aaa; min-width: 50px; }
+    .history-row .hr-pts {
+      font-size: 0.7rem; color: #2ecc71; background: rgba(46,204,113,0.15);
+      border-radius: 3px; padding: 0 4px;
+    }
+
+    #game-records-panel {
+      background: rgba(0,0,0,0.35); border-radius: 8px; padding: 8px 10px;
+      width: 100%; font-size: 0.74rem;
+    }
+    #game-records-panel h3 {
+      font-size: 0.85rem; margin-bottom: 6px; color: #f1c40f; display: flex; align-items: center; gap: 6px;
+    }
+    .gr-summary {
+      font-size: 0.78rem; color: #2ecc71; font-weight: bold; margin-bottom: 6px;
+      background: rgba(46,204,113,0.12); border-radius: 6px; padding: 4px 8px;
+    }
+    .gr-row {
+      display: flex; align-items: center; gap: 8px; padding: 2px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .gr-num { min-width: 42px; color: #888; font-size: 0.7rem; }
+    .gr-win { color: #f1c40f; font-weight: bold; min-width: 50px; }
+    .gr-lose { color: #e74c3c; font-weight: bold; min-width: 50px; }
+    .gr-tie { color: #888; min-width: 50px; }
+    .gr-pts { font-size: 0.7rem; color: #aee; }
+
+    @media (max-width: 820px) {
+      :root { --card-w: clamp(70px, 10vw, 90px); }
+      .hand-action-row { gap: 6px; }
+      .player-content { grid-template-columns: 1fr; }
+      .ai-hand-panel { flex-basis: 48px; min-height: 70px; }
+      .ai-hand-stack { width: 42px; height: 58px; }
+      .ai-hand-stack .card { left: calc(var(--stack-i) * 3px); top: calc(var(--stack-i) * 2px); transform: scale(0.52); }
+      #btn-play { flex-basis: 58px; font-size: 0.78rem; padding: 6px 4px; }
+    }
+    @media (max-width: 540px) {
+      :root { --card-w: clamp(55px, 14vw, 75px); }
+      #game-layout { display: flex; flex-direction: column; align-items: center; }
+      #btn-area { flex-direction: row; }
+    }
+  </style>
+</head>
+<body>
+  <div id="game-layout">
+    <main id="game-main">
+      <!-- Player 2 (AI) -->
+      <div class="player-zone" id="zone-p2">
+        <h2>🤖 玩家2（AI） <span id="badge-p2" class="badge" style="display:none">先手</span></h2>
+        <div class="player-content">
+          <div class="player-board">
+            <div class="table-area ai-table-area">
+              <div class="table-board">
+                <div class="card-row table-row" id="face-p2"></div>
+              </div>
+              <div class="ai-hand-panel">
+                <div class="ai-hand-stack" id="hand-p2"></div>
+                <div class="ai-hand-count" id="hand-count-p2">7张</div>
+              </div>
+              <div class="score-pile" id="score-pile-p2"></div>
+            </div>
+            <div class="info-row" id="info-p2" style="display:none"></div>
+          </div>
+          <div class="played-panel">
+            <div class="played-title">AI 出牌</div>
+            <div id="played-p2"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Player 1 (Human) -->
+      <div class="player-zone" id="zone-p1">
+        <h2>🧑 玩家1（你） <span id="badge-p1" class="badge" style="display:none">先手</span></h2>
+        <div class="player-content">
+          <div class="player-board">
+            <div class="table-area">
+              <div class="table-board">
+                <div class="card-row table-row" id="face-p1"></div>
+              </div>
+              <div class="score-pile" id="score-pile-p1"></div>
+            </div>
+            <div class="info-row" id="info-p1" style="display:none"></div>
+          </div>
+          <div class="played-panel">
+            <div class="played-title">你出牌</div>
+            <div id="played-p1"></div>
+          </div>
+        </div>
+        <div class="hand-area">
+          <div class="hand-action-row">
+            <div class="hand-board">
+              <div class="card-row hand-overlap" id="hand-p1"></div>
+            </div>
+            <button id="btn-play" disabled>出牌</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <aside id="side-panel">
+      <h1>🃏 夫妻牌 <span class="ver"></span></h1>
+      <div id="dragon-info"></div>
+      <div id="round-panel">
+        <div id="result-banner">——</div>
+        <div id="status-bar">等待开始……</div>
+        <div id="btn-area">
+          <button id="btn-continue" style="display:none;background:#2ecc71;color:#fff">继续游戏</button>
+          <button id="btn-restart">重新开始</button>
+        </div>
+      </div>
+      <div id="game-records-panel"></div>
+      <div id="history-panel"></div>
+    </aside>
+  </div>
+
+  <script type="module" src="adapter.js"></script>
+</body>
+</html>

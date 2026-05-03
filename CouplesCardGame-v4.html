@@ -1,0 +1,2751 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>夫妻牌</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --card-w: clamp(90px, 8vw, 120px);
+      --card-h: calc(var(--card-w) * 1.28);
+      --table-peek: clamp(8px, 0.7vw, 12px);
+      --card-gap: clamp(6px, 0.5vw, 10px);
+    }
+
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: #1a6b3a;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 8px 10px;
+      gap: 8px;
+      overflow-x: hidden;
+    }
+
+    #game-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) clamp(230px, 16vw, 300px);
+      gap: 10px;
+      align-items: start;
+      width: 100%;
+      max-width: 1840px;
+      min-width: 0;
+    }
+    #game-main {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 6px;
+      min-width: 0;
+    }
+    #side-panel {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      position: sticky;
+      top: 8px;
+    }
+    #side-panel h1 {
+      font-size: clamp(1.1rem, 1.1vw, 1.5rem); text-shadow: 1px 1px 3px #000;
+      display: flex; align-items: center; gap: 6px;
+      justify-content: center; margin-bottom: 2px;
+    }
+    #round-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    #side-panel h1 .ver {
+      font-size: 0.6rem; color: #aaa; font-weight: normal;
+      background: rgba(255,255,255,0.1); border-radius: 4px; padding: 2px 5px;
+    }
+
+    #status-bar {
+      background: rgba(0,0,0,0.45); border-radius: 8px; padding: 7px 9px;
+      font-size: 0.78rem; line-height: 1.35; text-align: left; width: 100%;
+    }
+
+    #dragon-info {
+      background: rgba(241,196,15,0.15); border: 1px solid #f1c40f;
+      border-radius: 8px; padding: 4px 8px; font-size: 0.72rem;
+      text-align: center; color: #f1c40f; width: 100%;
+      overflow-wrap: anywhere;
+    }
+
+    .player-zone {
+      background: rgba(0,0,0,0.3); border-radius: 8px; padding: 6px 10px;
+      width: 100%;
+    }
+    .player-zone h2 { font-size: 0.86rem; margin-bottom: 3px; display: flex; align-items: center; gap: 6px; }
+    .player-content {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) clamp(150px, 12vw, 210px);
+      gap: 8px;
+      align-items: stretch;
+      min-width: 0;
+    }
+    .player-board { min-width: 0; }
+    .hand-area {
+      margin-top: 4px; padding: 6px 10px;
+      background: rgba(0,0,0,0.15); border-radius: 8px;
+    }
+    .hand-action-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      min-width: 0;
+    }
+    .hand-board { flex: 1 1 auto; min-width: 0; }
+    .badge { font-size: 0.7rem; padding: 2px 8px; border-radius: 12px; background: #e67e22; color: #fff; }
+
+    .row-label { font-size: 0.72rem; color: #bbb; margin-bottom: 2px; margin-top: 3px; }
+    .card-row { display: flex; flex-wrap: wrap; gap: var(--card-gap); min-height: var(--card-h); align-items: flex-end; }
+
+    .card {
+      width: var(--card-w); height: var(--card-h); border-radius: 5px; border: 2px solid #fff;
+      display: flex; flex-direction: column; justify-content: space-between;
+      padding: 4px 5px; font-size: clamp(0.9rem, 0.85vw, 1.15rem); font-weight: bold; cursor: default;
+      user-select: none; position: relative; background: #fff; color: #222;
+      transition: transform 0.15s, box-shadow 0.15s; flex-shrink: 0;
+    }
+    .card.red { color: #c0392b; }
+    .card.pink { color: #d63384; }
+    .card.black { color: #1a1a1a; }
+    .card.dark { color: #1a5b3a; }
+    .card.joker-big { color: #c0392b; background: linear-gradient(135deg,#fff 60%,#ffecd2); }
+    .card.joker-small { color: #1a1a1a; background: linear-gradient(135deg,#fff 60%,#d5e8d4); }
+    .card.face-down {
+      background: repeating-linear-gradient(45deg, #1a3a6b, #1a3a6b 5px, #1e4080 5px, #1e4080 10px);
+      border-color: #aaa; color: transparent;
+    }
+    .hand-overlap {
+      display: flex; flex-wrap: nowrap;
+    }
+    .hand-overlap .card {
+      margin-left: calc(var(--card-w) * -0.4);
+    }
+    .hand-overlap .card:first-child {
+      margin-left: 0;
+    }
+
+    .card .top { align-self: flex-start; line-height: 1; font-size: clamp(1.56rem, 1.44vw, 1.98rem); }
+    .card .suit { font-size: clamp(3.12rem, 3vw, 3.96rem); align-self: center; }
+    .card .bottom { align-self: flex-end; line-height: 1; transform: rotate(180deg); font-size: clamp(1.56rem, 1.44vw, 1.98rem); }
+    .card.selectable { cursor: pointer; border-color: #f1c40f; }
+    .card.selectable:hover { transform: translateY(-5px); box-shadow: 0 6px 16px rgba(0,0,0,0.5); }
+    .card.selected {
+      transform: translateY(-8px); box-shadow: 0 8px 20px rgba(241,196,15,0.8);
+      border-color: #f1c40f; border-width: 3px;
+    }
+    .card.empty {
+      background: rgba(255,255,255,0.07); border: 2px dashed rgba(255,255,255,0.3); color: transparent;
+    }
+
+    .table-row {
+      display: flex; flex-wrap: wrap; gap: var(--card-gap);
+      width: 100%; max-width: calc(var(--card-w) * 5 + var(--card-gap) * 4);
+      min-height: calc((var(--card-h) + var(--table-peek)) * 2);
+    }
+    .table-slot {
+      position: relative; width: var(--card-w);
+      height: calc(var(--card-h) + var(--table-peek));
+      flex: 0 0 var(--card-w);
+    }
+    .table-slot .card { position: absolute; left: 0; }
+    .table-slot .under-card { bottom: 0; z-index: 0; pointer-events: none; }
+    .table-slot .face-card { bottom: var(--table-peek); z-index: 1; }
+
+    .table-area {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
+    }
+    .ai-table-area {
+      display: flex; align-items: flex-start; gap: 8px;
+    }
+    .table-board { flex: 1 1 0; width: 100%; min-width: 0; }
+    .ai-hand-panel {
+      flex: 0 0 clamp(81px, 6vw, 114px);
+      min-height: calc(var(--card-h) + 22px);
+      display: flex; flex-direction: column; align-items: center; gap: 3px; padding-top: 2px;
+    }
+    .ai-hand-stack {
+      position: relative; width: clamp(46px, 3.8vw, 66px);
+      height: calc(var(--card-h) * 0.7 + 26px);
+    }
+    .ai-hand-stack .card {
+      position: absolute;
+      left: calc(var(--stack-i) * 4px);
+      top: calc(var(--stack-i) * 3px);
+      transform: scale(0.58);
+      transform-origin: top left;
+      z-index: var(--stack-i);
+      box-shadow: 0 3px 8px rgba(0,0,0,0.25);
+      transition: none;
+    }
+    .ai-hand-count { font-size: 0.68rem; color: #aee; line-height: 1; white-space: nowrap; }
+
+    .score-pile {
+      width: clamp(105px, 7.2vw, 141px); min-height: 200px; padding-top: 14px;
+      flex: 0 0 clamp(70px, 4.8vw, 94px);
+    }
+    .score-pile-title { font-size: 0.7rem; color: #f1c40f; text-align: center; margin-bottom: 3px; white-space: nowrap; }
+    .score-stack { position: relative; width: 100%; height: 150px; }
+    .score-stack .card {
+      position: absolute;
+      left: calc(10px + var(--stack-col) * 25px);
+      top: calc(var(--stack-row) * 11px);
+      transform: rotate(calc((var(--stack-col) * 2 - 1) * 2deg)) scale(0.62);
+      transform-origin: top center;
+      z-index: var(--stack-i);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.35);
+      transition: none;
+    }
+    .score-stack .card .top { font-size: 0.8rem; text-shadow: 0 0 1px rgba(255,255,255,0.75); }
+    .score-stack .card.empty { left: 50%; top: 0; transform: translateX(-50%) scale(0.72); box-shadow: none; }
+    .score-count { font-size: 0.68rem; color: #aee; text-align: center; line-height: 1.2; }
+
+    .played-panel {
+      display: flex; flex-direction: column; align-items: center; gap: 7px;
+      min-width: 0; min-height: 100%; padding: 7px 5px;
+      border-radius: 8px; background: rgba(0,0,0,0.18); border: 1px solid rgba(255,255,255,0.1);
+    }
+    .played-title { font-size: 0.72rem; color: #ddd; white-space: nowrap; }
+    .played-panel .card:not(.empty) {
+      opacity: 1 !important; filter: none !important; box-shadow: 0 5px 14px rgba(0,0,0,0.35);
+    }
+
+    #result-banner {
+      background: rgba(0,0,0,0.35); border-radius: 8px; padding: 10px 12px;
+      font-size: 1rem; font-weight: bold; text-align: left; min-height: 3rem;
+      line-height: 1.28; text-shadow: 1px 1px 4px #000;
+    }
+
+    #btn-area { display: flex; flex-direction: column; gap: 7px; }
+    button {
+      width: 100%; padding: 8px 10px; border: none; border-radius: 8px; font-size: 0.85rem;
+      font-weight: bold; cursor: pointer; transition: opacity 0.15s, transform 0.1s;
+    }
+    button:hover:not(:disabled) { opacity: 0.85; transform: scale(1.04); }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    #btn-play {
+      flex: 0 0 clamp(78px, 5vw, 112px); height: var(--card-h);
+      align-self: flex-end; background: #f1c40f; color: #1a1a1a;
+    }
+    #btn-restart { background: #e74c3c; color: #fff; }
+
+    .info-row { font-size: 0.74rem; color: #aee; margin-top: 3px; }
+
+    #history-panel {
+      background: rgba(0,0,0,0.35); border-radius: 8px; padding: 8px 10px;
+      width: 100%; font-size: 0.74rem;
+    }
+    #history-panel h3 {
+      font-size: 0.85rem; margin-bottom: 6px; color: #f1c40f; display: flex; align-items: center; gap: 6px;
+    }
+    .history-row {
+      display: flex; align-items: center; gap: 8px; padding: 3px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.08); flex-wrap: wrap;
+    }
+    .history-row .hr-round { min-width: 40px; color: #888; font-size: 0.7rem; }
+    .history-row .hr-card {
+      display: inline-flex; align-items: center; gap: 3px;
+      font-size: 0.78rem; font-weight: bold;
+      background: rgba(255,255,255,0.15); border-radius: 4px; padding: 1px 6px;
+    }
+    .history-row .hr-red { color: #ff6b6b; }
+    .history-row .hr-pink { color: #ff8ec7; }
+    .history-row .hr-black { color: #ddd; }
+    .history-row .hr-win  { color: #ffd700; font-weight: bold; min-width: 50px; }
+    .history-row .hr-lose { color: #ff6b6b; font-weight: bold; min-width: 50px; }
+    .history-row .hr-tie  { color: #aaa; min-width: 50px; }
+    .history-row .hr-pts {
+      font-size: 0.7rem; color: #2ecc71; background: rgba(46,204,113,0.15);
+      border-radius: 3px; padding: 0 4px;
+    }
+
+    #game-records-panel {
+      background: rgba(0,0,0,0.35); border-radius: 8px; padding: 8px 10px;
+      width: 100%; font-size: 0.74rem;
+    }
+    #game-records-panel h3 {
+      font-size: 0.85rem; margin-bottom: 6px; color: #f1c40f; display: flex; align-items: center; gap: 6px;
+    }
+    .gr-summary {
+      font-size: 0.78rem; color: #2ecc71; font-weight: bold; margin-bottom: 6px;
+      background: rgba(46,204,113,0.12); border-radius: 6px; padding: 4px 8px;
+    }
+    .gr-row {
+      display: flex; align-items: center; gap: 8px; padding: 2px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .gr-num { min-width: 42px; color: #888; font-size: 0.7rem; }
+    .gr-win { color: #f1c40f; font-weight: bold; min-width: 50px; }
+    .gr-lose { color: #e74c3c; font-weight: bold; min-width: 50px; }
+    .gr-tie { color: #888; min-width: 50px; }
+    .gr-pts { font-size: 0.7rem; color: #aee; }
+
+    @media (max-width: 820px) {
+      :root { --card-w: clamp(70px, 10vw, 90px); }
+      .hand-action-row { gap: 6px; }
+      .player-content { grid-template-columns: 1fr; }
+      .ai-hand-panel { flex-basis: 48px; min-height: 70px; }
+      .ai-hand-stack { width: 42px; height: 58px; }
+      .ai-hand-stack .card { left: calc(var(--stack-i) * 3px); top: calc(var(--stack-i) * 2px); transform: scale(0.52); }
+      #btn-play { flex-basis: 58px; font-size: 0.78rem; padding: 6px 4px; }
+    }
+    @media (max-width: 540px) {
+      :root { --card-w: clamp(55px, 14vw, 75px); }
+      #game-layout { display: flex; flex-direction: column; align-items: center; }
+      #btn-area { flex-direction: row; }
+    }
+  </style>
+</head>
+<body>
+  <div id="game-layout">
+    <main id="game-main">
+      <!-- Player 2 (AI) -->
+      <div class="player-zone" id="zone-p2">
+        <h2>🤖 玩家2（AI） <span id="badge-p2" class="badge" style="display:none">先手</span></h2>
+        <div class="player-content">
+          <div class="player-board">
+            <div class="table-area ai-table-area">
+              <div class="table-board">
+                <div class="card-row table-row" id="face-p2"></div>
+              </div>
+              <div class="ai-hand-panel">
+                <div class="ai-hand-stack" id="hand-p2"></div>
+                <div class="ai-hand-count" id="hand-count-p2">7张</div>
+              </div>
+              <div class="score-pile" id="score-pile-p2"></div>
+            </div>
+            <div class="info-row" id="info-p2" style="display:none"></div>
+          </div>
+          <div class="played-panel">
+            <div class="played-title">AI 出牌</div>
+            <div id="played-p2"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Player 1 (Human) -->
+      <div class="player-zone" id="zone-p1">
+        <h2>🧑 玩家1（你） <span id="badge-p1" class="badge" style="display:none">先手</span></h2>
+        <div class="player-content">
+          <div class="player-board">
+            <div class="table-area">
+              <div class="table-board">
+                <div class="card-row table-row" id="face-p1"></div>
+              </div>
+              <div class="score-pile" id="score-pile-p1"></div>
+            </div>
+            <div class="info-row" id="info-p1" style="display:none"></div>
+          </div>
+          <div class="played-panel">
+            <div class="played-title">你出牌</div>
+            <div id="played-p1"></div>
+          </div>
+        </div>
+        <div class="hand-area">
+          <div class="hand-action-row">
+            <div class="hand-board">
+              <div class="card-row hand-overlap" id="hand-p1"></div>
+            </div>
+            <button id="btn-play" disabled>出牌</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <aside id="side-panel">
+      <h1>🃏 夫妻牌 <span class="ver"></span></h1>
+      <div id="dragon-info"></div>
+      <div id="round-panel">
+        <div id="result-banner">——</div>
+        <div id="status-bar">等待开始……</div>
+        <div id="btn-area">
+          <button id="btn-continue" style="display:none;background:#2ecc71;color:#fff">继续游戏</button>
+          <button id="btn-restart">重新开始</button>
+        </div>
+      </div>
+      <div id="game-records-panel"></div>
+      <div id="history-panel"></div>
+    </aside>
+  </div>
+
+  <script>
+// ════════════════════════════════════════════════════
+// 扑克牌对战 — 独立捆绑包
+// Built: 2026-05-03 12:25:16
+// ════════════════════════════════════════════════════
+
+// ── src/game/card.js ──────────────────────────────────────
+
+// ═══════════════════════════════════════════════════════════════════
+// card.js - Card types and utilities
+// ═══════════════════════════════════════════════════════════════════
+
+const SUITS = ['♠', '♥', '♦', '♣'];
+const SUIT_COLOR = { '♠': 'black', '♣': 'dark', '♥': 'pink', '♦': 'red' };
+const RANK_ORDER = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', '小王', '大王'];
+const TOTAL_ROUNDS = 27;
+const TOTAL_POINTS = 100; // 4×5 + 4×10 + 4×K
+
+/**
+ * Create a card object.
+ * @param {string} suit - '♠'|'♥'|'♦'|'♣'|''
+ * @param {string} rank - '2'..'10'|'J'|'Q'|'K'|'A'|'小王'|'大王'
+ * @returns {{ suit, rank, color }}
+ */
+function createCard(suit, rank) {
+  const color =
+    rank === '小王' ? 'joker-small'
+    : rank === '大王' ? 'joker-big'
+    : SUIT_COLOR[suit] || 'black';
+  return { suit, rank, color };
+}
+
+/** Check if a card is a joker (小王 or 大王). */
+function isJoker(card) {
+  return card.rank === '小王' || card.rank === '大王';
+}
+
+/**
+ * Get the score value of a card.
+ * @returns {number} 0, 5, or 10
+ */
+function getCardScore(card) {
+  if (isJoker(card)) return 0;
+  if (card.rank === '5') return 5;
+  if (card.rank === '10' || card.rank === 'K') return 10;
+  return 0;
+}
+
+/**
+ * Get the effective suit for comparison purposes.
+ * Jokers always count as the dragon suit.
+ * @param {object} card
+ * @param {string} dragonSuit
+ * @returns {string}
+ */
+function getEffectiveSuit(card, dragonSuit) {
+  return isJoker(card) ? dragonSuit : card.suit;
+}
+
+/**
+ * Check if a card is privileged (dragon suit or joker).
+ * @param {object} card
+ * @param {string} dragonSuit
+ * @returns {boolean}
+ */
+function isPrivileged(card, dragonSuit) {
+  return getEffectiveSuit(card, dragonSuit) === dragonSuit;
+}
+
+/**
+ * Get numeric power for a card (used for comparison and AI).
+ * Higher = stronger. Privileged cards get +100 offset.
+ * @param {object} card
+ * @param {string} dragonSuit
+ * @returns {number}
+ */
+function getCardPower(card, dragonSuit) {
+  return (isPrivileged(card, dragonSuit) ? 100 : 0) + RANK_ORDER.indexOf(card.rank);
+}
+
+/**
+ * Convert a card to a short display label.
+ * @param {object|null} card
+ * @returns {string}
+ */
+function cardToLabel(card) {
+  if (!card) return '—';
+  if (isJoker(card)) return card.rank;
+  return card.rank + card.suit;
+}
+
+// ── src/game/deck.js ──────────────────────────────────────
+
+// ═══════════════════════════════════════════════════════════════════
+// deck.js - Deck creation, shuffle, dealing
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Create a standard 54-card deck:
+ * 4 suits × 13 ranks (2..A) + 小王 + 大王
+ * @returns {Array<{suit, rank, color}>}
+ */
+function createDeck() {
+  const deck = [];
+  const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+  for (const suit of SUITS) {
+    for (const rank of ranks) {
+      deck.push({ suit, rank, color: SUIT_COLOR[suit] });
+    }
+  }
+  deck.push({ suit: '', rank: '小王', color: 'joker-small' });
+  deck.push({ suit: '', rank: '大王', color: 'joker-big' });
+  return deck;
+}
+
+/**
+ * Fisher-Yates shuffle (returns new array).
+ * @param {Array} deck
+ * @returns {Array}
+ */
+function shuffleDeck(deck) {
+  const d = [...deck];
+  for (let i = d.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [d[i], d[j]] = [d[j], d[i]];
+  }
+  return d;
+}
+
+/**
+ * Deal cards to two players.
+ *
+ * Each player gets:
+ *   - 10 down cards (face-down on table)
+ *   - 10 face cards (face-up covering the down cards)
+ *   - 7 hand cards
+ *
+ * Cards are dealt alternating between p1 and p2.
+ *
+ * @param {Array} [deck] - Optional pre-built deck; if omitted creates+shuffles one
+ * @returns {{ p1: {table: Array, hand: Array}, p2: {table: Array, hand: Array} }}
+ */
+function dealCards(deck) {
+  const d = deck ? shuffleDeck(deck) : shuffleDeck(createDeck());
+
+  const p1 = { table: [], hand: [] };
+  const p2 = { table: [], hand: [] };
+
+  // Initialize 10 empty table slots per player
+  for (let i = 0; i < 10; i++) {
+    p1.table.push({ down: null, face: null });
+    p2.table.push({ down: null, face: null });
+  }
+
+  let ci = 0;
+
+  // Phase 1: 10 down cards each (alternating)
+  for (let i = 0; i < 10; i++) {
+    p1.table[i].down = d[ci++];
+    p2.table[i].down = d[ci++];
+  }
+
+  // Phase 2: 10 face cards each (alternating)
+  for (let i = 0; i < 10; i++) {
+    p1.table[i].face = d[ci++];
+    p2.table[i].face = d[ci++];
+  }
+
+  // Phase 3: 7 hand cards each (alternating)
+  for (let i = 0; i < 7; i++) {
+    p1.hand.push(d[ci++]);
+    p2.hand.push(d[ci++]);
+  }
+
+  return { p1, p2 };
+}
+
+// ── src/game/rules.js ──────────────────────────────────────
+
+// ═══════════════════════════════════════════════════════════════════
+// rules.js - Pure rule functions
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Get all available playable cards for a player (hand + face-up table cards).
+ * @param {{ hand: Array, table: Array }} player
+ * @returns {Array<{type: 'hand'|'face', index: number, card: object}>}
+ */
+function getAvailableCards(player) {
+  const cards = [];
+  for (let i = 0; i < player.hand.length; i++) {
+    cards.push({ type: 'hand', index: i, card: player.hand[i] });
+  }
+  for (let i = 0; i < player.table.length; i++) {
+    if (player.table[i].face) {
+      cards.push({ type: 'face', index: i, card: player.table[i].face });
+    }
+  }
+  return cards;
+}
+
+/**
+ * Get legal moves for a player given an optional lead card.
+ * - If leadCard is null (player is leading), all available cards are legal.
+ * - If leadCard is given (player is following), must follow suit.
+ *   No matching suit → any card is legal.
+ *
+ * @param {{ hand: Array, table: Array }} player
+ * @param {object|null} leadCard
+ * @param {string} dragonSuit
+ * @returns {Array<{type: 'hand'|'face', index: number, card: object}>}
+ */
+function getLegalMoves(player, leadCard, dragonSuit) {
+  const available = getAvailableCards(player);
+  if (!leadCard) return available;
+
+  const leadSuit = getEffectiveSuit(leadCard, dragonSuit);
+  const sameSuit = available.filter(a =>
+    getEffectiveSuit(a.card, dragonSuit) === leadSuit
+  );
+
+  if (sameSuit.length > 0) return sameSuit;
+  return available;
+}
+
+/**
+ * Compare two cards. Both cards are already played.
+ * Follows CouplesCardGame rules:
+ *   - Privileged > non-privileged
+ *   - Both privileged → higher rank wins
+ *   - Both non-privileged, same effective suit → higher rank wins
+ *   - Both non-privileged, different suit → first (lead) card wins
+ *
+ * @param {object} a - The first/lead card
+ * @param {object} b - The second/follow card
+ * @param {string} dragonSuit
+ * @returns {number}  1 if a wins, -1 if b wins, 0 if tie
+ */
+function compareCards(a, b, dragonSuit) {
+  if (!a || !b) return 0;
+
+  const aP = isPrivileged(a, dragonSuit);
+  const bP = isPrivileged(b, dragonSuit);
+
+  if (aP && !bP) return 1;
+  if (!aP && bP) return -1;
+
+  if (aP && bP) {
+    return compareRank(a, b);
+  }
+
+  const aSuit = getEffectiveSuit(a, dragonSuit);
+  const bSuit = getEffectiveSuit(b, dragonSuit);
+
+  if (aSuit === bSuit) return compareRank(a, b);
+
+  // Different suits, both non-privileged → first card (lead) wins
+  return 1;
+}
+
+/**
+ * Rank comparison helper.
+ * @returns {number} 1 if a > b, -1 if a < b, 0 if equal
+ */
+function compareRank(a, b) {
+  const ia = RANK_ORDER.indexOf(a.rank);
+  const ib = RANK_ORDER.indexOf(b.rank);
+  if (ia > ib) return 1;
+  if (ia < ib) return -1;
+  return 0;
+}
+
+/**
+ * Can the second card beat the lead/first card?
+ * @param {object} leadCard
+ * @param {object} secondCard
+ * @param {string} dragonSuit
+ * @returns {boolean}
+ */
+function canSecondCardWin(leadCard, secondCard, dragonSuit) {
+  return compareCards(leadCard, secondCard, dragonSuit) < 0;
+}
+
+/**
+ * Can the lead card hold against all possible replies from opponent?
+ * (i.e., no opponent card can beat it)
+ * This requires inspecting the opponent's visible cards.
+ *
+ * @param {object} leadCard
+ * @param {{ hand: Array, table: Array }} opponent
+ * @param {string} dragonSuit
+ * @returns {boolean}
+ */
+function canLeadCardHold(leadCard, opponent, dragonSuit) {
+  const replies = getLegalMoves(opponent, leadCard, dragonSuit);
+  return replies.length === 0 ||
+    replies.every(reply => compareCards(leadCard, reply.card, dragonSuit) > 0);
+}
+
+/**
+ * Determine the dragon suit from the dealt state.
+ * Dragon suit is determined by the first non-joker face card among:
+ *   1. First player's table slot 0 face card
+ *   2. Second player's table slot 0 face card
+ *   3. First player's table slot 1 face card
+ * Fallback: scan remaining first player face cards; if all jokers → '♠'
+ *
+ * @param {{ p1: {table: Array}, p2: {table: Array} }} dealState
+ * @param {number} firstPlayer - 1 or 2
+ * @returns {string}
+ */
+function determineDragonSuit(dealState, firstPlayer) {
+  const fp = firstPlayer === 1 ? dealState.p1 : dealState.p2;
+  const sp = firstPlayer === 1 ? dealState.p2 : dealState.p1;
+
+  const candidates = [fp.table[0].face, sp.table[0].face, fp.table[1].face];
+  for (const card of candidates) {
+    if (card && !isJoker(card)) return card.suit;
+  }
+
+  // Fallback: scan remaining first-player face cards
+  for (let i = 2; i < 10; i++) {
+    if (fp.table[i].face && !isJoker(fp.table[i].face)) return fp.table[i].face.suit;
+  }
+
+  // All face cards are jokers (impossible with 54-card deck, but just in case)
+  return '♠';
+}
+
+// ── src/game/state.js ──────────────────────────────────────
+
+// ═══════════════════════════════════════════════════════════════════
+// state.js - Pure state management (no mutations)
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Move type: { type: 'hand'|'face', index: number }
+ *   - hand: play from hand cards
+ *   - face: play from table face-up cards
+ */
+
+// ─────────────────────────────────────────────────────────────────
+// createState
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Create a fresh game state.
+ * Deals cards, determines dragon suit, sets round 1.
+ *
+ * @param {{ p1: string, p2: string }} [strategies] - AI strategies ('V1'|'V2')
+ * @returns {object} Complete game state
+ */
+function createState(strategies = { p1: 'V1', p2: 'V2' }) {
+  const deck = shuffleDeck(createDeck());
+  const deal = dealCards(deck);
+  const dragonSuit = determineDragonSuit(deal, 1);
+
+  return {
+    round: 1,
+    phase: 'select',           // 'select' | 'reveal' | 'gameover'
+    firstPlayer: 1,            // 1 or 2 — who leads this round
+    p1: {
+      hand: [...deal.p1.hand],
+      table: deal.p1.table.map(s => ({ down: s.down ? { ...s.down } : null, face: s.face ? { ...s.face } : null })),
+      score: 0,
+      scoreCards: [],
+    },
+    p2: {
+      hand: [...deal.p2.hand],
+      table: deal.p2.table.map(s => ({ down: s.down ? { ...s.down } : null, face: s.face ? { ...s.face } : null })),
+      score: 0,
+      scoreCards: [],
+    },
+    dragonSuit,
+    playedP1: null,            // Card object played by p1 this round
+    playedP2: null,            // Card object played by p2 this round
+    playedP1Source: null,      // Move | null
+    playedP2Source: null,      // Move | null
+    roundResult: null,         // 'p1' | 'p2' | 'tie' | null
+    roundScore: 0,             // Points at stake this round
+    history: [],               // Last 3 rounds [{ round, p1: Card, p2: Card, winner, points }]
+    selectedSource: null,      // Currently selected card in UI (Move | null)
+    strategies: { ...strategies },
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────
+// cloneState
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Deep-clone a state object.
+ * @param {object} state
+ * @returns {object}
+ */
+function cloneState(state) {
+  return JSON.parse(JSON.stringify(state));
+}
+
+// ─────────────────────────────────────────────────────────────────
+// applyMove
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Apply a single move for a player: play a card from hand or table face.
+ * Returns a NEW state (immutable).
+ *
+ * @param {object} state
+ * @param {'p1'|'p2'} playerId
+ * @param {{ type: 'hand'|'face', index: number }} move
+ * @returns {object} new state
+ */
+function applyMove(state, playerId, move) {
+  const ns = cloneState(state);
+  const player = ns[playerId];
+  let card;
+
+  if (move.type === 'hand') {
+    card = player.hand.splice(move.index, 1)[0];
+    if (!card) return ns; // safety
+  } else {
+    // Face card from table
+    const slot = player.table[move.index];
+    if (!slot || !slot.face) return ns; // safety
+    card = slot.face;
+    slot.face = null;
+  }
+
+  if (playerId === 'p1') {
+    ns.playedP1 = card;
+    ns.playedP1Source = { type: move.type, index: move.index };
+  } else {
+    ns.playedP2 = card;
+    ns.playedP2Source = { type: move.type, index: move.index };
+  }
+
+  ns.selectedSource = null;
+  return ns;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// resolveRound
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Resolve the current round after both players have played.
+ * Determines winner, assigns scores, updates history.
+ * Sets phase → 'reveal'.
+ *
+ * @param {object} state
+ * @returns {object} new state
+ */
+function resolveRound(state) {
+  const ns = cloneState(state);
+
+  if (!ns.playedP1 || !ns.playedP2) return ns; // not ready
+
+  const firstIsP1 = ns.firstPlayer === 1;
+  const firstCard = firstIsP1 ? ns.playedP1 : ns.playedP2;
+  const secondCard = firstIsP1 ? ns.playedP2 : ns.playedP1;
+
+  const cmp = compareCards(firstCard, secondCard, ns.dragonSuit);
+
+  let winner;
+  if (cmp > 0) {
+    winner = ns.firstPlayer;        // first card wins → first player wins
+  } else if (cmp < 0) {
+    winner = ns.firstPlayer === 1 ? 2 : 1;  // second card wins → other player
+  } else {
+    winner = 0;                     // tie
+  }
+
+  const roundScore = getCardScore(ns.playedP1) + getCardScore(ns.playedP2);
+  ns.roundScore = roundScore;
+  ns.roundResult = winner === 1 ? 'p1' : winner === 2 ? 'p2' : 'tie';
+
+  // All score cards from both players go to the winner
+  const wonScoreCards = [ns.playedP1, ns.playedP2].filter(c => getCardScore(c) > 0);
+
+  if (winner === 1) {
+    ns.p1.score += roundScore;
+    ns.p1.scoreCards.push(...wonScoreCards);
+    ns.firstPlayer = 1;
+  } else if (winner === 2) {
+    ns.p2.score += roundScore;
+    ns.p2.scoreCards.push(...wonScoreCards);
+    ns.firstPlayer = 2;
+  }
+  // tie: firstPlayer stays unchanged
+
+  // Add to history (keep last 3)
+  ns.history.push({
+    round: ns.round,
+    p1: { ...ns.playedP1 },
+    p2: { ...ns.playedP2 },
+    winner: ns.roundResult,
+    points: roundScore,
+  });
+  if (ns.history.length > 3) ns.history.shift();
+
+  ns.phase = 'reveal';
+  return ns;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// advanceRound
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Advance to the next round after a reveal.
+ * Flips down cards for played face slots, resets round state,
+ * increments round, sets phase → 'select' (or 'gameover' if terminal).
+ *
+ * @param {object} state
+ * @returns {object} new state
+ */
+function advanceRound(state) {
+  const ns = cloneState(state);
+  if (ns.phase !== 'reveal') return ns;
+
+  // If a face card was played, reveal the down card under it
+  if (ns.playedP1Source && ns.playedP1Source.type === 'face') {
+    const idx = ns.playedP1Source.index;
+    if (ns.p1.table[idx] && ns.p1.table[idx].down) {
+      ns.p1.table[idx].face = ns.p1.table[idx].down;
+      ns.p1.table[idx].down = null;
+    }
+  }
+  if (ns.playedP2Source && ns.playedP2Source.type === 'face') {
+    const idx = ns.playedP2Source.index;
+    if (ns.p2.table[idx] && ns.p2.table[idx].down) {
+      ns.p2.table[idx].face = ns.p2.table[idx].down;
+      ns.p2.table[idx].down = null;
+    }
+  }
+
+  // If hand is empty, flip all remaining down cards to face-up
+  for (const pid of ['p1', 'p2']) {
+    if (ns[pid].hand.length === 0) {
+      for (const slot of ns[pid].table) {
+        if (slot.down && !slot.face) {
+          slot.face = slot.down;
+          slot.down = null;
+        }
+      }
+    }
+  }
+
+  // Clear round-specific fields
+  ns.playedP1 = null;
+  ns.playedP2 = null;
+  ns.playedP1Source = null;
+  ns.playedP2Source = null;
+  ns.roundResult = null;
+  ns.roundScore = 0;
+
+  // Check game over
+  if (ns.round >= TOTAL_ROUNDS) {
+    ns.phase = 'gameover';
+    return ns;
+  }
+
+  ns.round++;
+  ns.phase = 'select';
+  return ns;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Terminal / Winner checks
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Check if the game has ended.
+ * @param {object} state
+ * @returns {boolean}
+ */
+function isTerminal(state) {
+  if (state.phase === 'gameover') return true;
+  if (state.round > TOTAL_ROUNDS) return true;
+  // 一方无牌可出时游戏提前结束（getAvailableCards 含手牌+桌面明牌）
+  return getAvailableCards(state.p1).length === 0 || getAvailableCards(state.p2).length === 0;
+}
+
+/**
+ * Get the winner of a completed game.
+ * @param {object} state
+ * @returns {number|null} 1 = p1 wins, 2 = p2 wins, 0 = tie, null = game not over
+ */
+function getWinner(state) {
+  if (!isTerminal(state)) return null;
+  if (state.p1.score > state.p2.score) return 1;
+  if (state.p2.score > state.p1.score) return 2;
+  return 0;
+}
+
+// ── src/ai/easyBot.js ──────────────────────────────────────
+
+// ═══════════════════════════════════════════════════════════════════
+// easyBot.js - Simple heuristic bot
+// ═══════════════════════════════════════════════════════════════════
+
+// ─────────────────────────────────────────────────────────────────
+// Helper: choose lowest-power card from a list
+// ─────────────────────────────────────────────────────────────────
+
+function chooseLowestPower(cards, dragonSuit) {
+  let best = cards[0];
+  let bestPower = getCardPower(best.card, dragonSuit);
+  for (let i = 1; i < cards.length; i++) {
+    const power = getCardPower(cards[i].card, dragonSuit);
+    if (power < bestPower) {
+      bestPower = power;
+      best = cards[i];
+    }
+  }
+  return best;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Helper: choose card with lowest score, tie-break with lowest power
+// ─────────────────────────────────────────────────────────────────
+
+function chooseLowestScoreCard(cards, dragonSuit) {
+  let best = cards[0];
+  for (let i = 1; i < cards.length; i++) {
+    const bestScore = getCardScore(best.card);
+    const score = getCardScore(cards[i].card);
+    const bestPower = getCardPower(best.card, dragonSuit);
+    const power = getCardPower(cards[i].card, dragonSuit);
+    if (score < bestScore || (score === bestScore && power < bestPower)) {
+      best = cards[i];
+    }
+  }
+  return best;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// chooseCard
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Easy bot: simple heuristic strategy.
+ * Uses ONLY visible information (no opponent hand peeking).
+ *
+ * Leading:
+ *   1. Play privileged score cards (smallest first)
+ *   2. Play lowest non-score card
+ *   3. Play lowest score card if that's all that's left
+ *
+ * Following:
+ *   1. If lead card has points and we can win, play lowest winner (prefer score cards)
+ *   2. If we can play a scoring card that wins, play smallest
+ *   3. Default: play lowest non-score card that loses
+ *
+ * @param {object} state - Full game state (bot only accesses own info + visible board)
+ * @param {'p1'|'p2'} playerId - Which player this bot controls
+ * @param {object|null} leadCard - The card that was led, or null if bot is leading
+ * @returns {{ type: 'hand'|'face', index: number }} The chosen move, or null if none
+ */
+function easyChoose(state, playerId, leadCard) {
+  const player = state[playerId];
+  const dragonSuit = state.dragonSuit;
+  const playable = getLegalMoves(player, leadCard, dragonSuit);
+
+  if (playable.length === 0) return null;
+
+  if (leadCard) {
+    // ── Following ──
+    const winners = playable.filter(a => canSecondCardWin(leadCard, a.card, dragonSuit));
+    const scoreWinners = winners.filter(a => getCardScore(a.card) > 0);
+
+    // If lead card has points and we can win, definitely try to capture
+    if (getCardScore(leadCard) > 0 && winners.length > 0) {
+      return scoreWinners.length > 0
+        ? chooseLowestScoreCard(scoreWinners, dragonSuit)
+        : chooseLowestPower(winners, dragonSuit);
+    }
+
+    // If we can win with a scoring card, play it
+    if (scoreWinners.length > 0) {
+      return chooseLowestScoreCard(scoreWinners, dragonSuit);
+    }
+  } else {
+    // ── Leading ──
+    const privileged = playable.filter(a => isPrivileged(a.card, dragonSuit));
+    const scoreCards = playable.filter(a => getCardScore(a.card) > 0);
+
+    // Prefer privileged score cards (safe to lead with)
+    const privScore = privileged.filter(a => getCardScore(a.card) > 0);
+    if (privScore.length > 0) {
+      return chooseLowestScoreCard(privScore, dragonSuit);
+    }
+
+    // If all available cards are score cards, play the smallest
+    if (scoreCards.length > 0 && scoreCards.length === playable.length) {
+      return chooseLowestScoreCard(scoreCards, dragonSuit);
+    }
+  }
+
+  // Default: play lowest power non-score card
+  const nonScore = playable.filter(a => getCardScore(a.card) === 0);
+  return chooseLowestPower(nonScore.length > 0 ? nonScore : playable, dragonSuit);
+}
+
+// ── src/ai/normalBot.js ──────────────────────────────────────
+
+// ═══════════════════════════════════════════════════════════════════
+// normalBot.js - Improved bot with card counting & table-first
+// ═══════════════════════════════════════════════════════════════════
+
+// ─────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────
+
+function chooseLowestPower(cards, dragonSuit) {
+  let best = cards[0];
+  let bestPower = getCardPower(best.card, dragonSuit);
+  for (let i = 1; i < cards.length; i++) {
+    const power = getCardPower(cards[i].card, dragonSuit);
+    if (power < bestPower) { bestPower = power; best = cards[i]; }
+  }
+  return best;
+}
+
+function chooseHighestPower(cards, dragonSuit) {
+  let best = cards[0];
+  let bestPower = getCardPower(best.card, dragonSuit);
+  for (let i = 1; i < cards.length; i++) {
+    const power = getCardPower(cards[i].card, dragonSuit);
+    if (power > bestPower) { bestPower = power; best = cards[i]; }
+  }
+  return best;
+}
+
+function chooseLowestScoreCard(cards, dragonSuit) {
+  let best = cards[0];
+  for (let i = 1; i < cards.length; i++) {
+    const bestScore = getCardScore(best.card);
+    const score = getCardScore(cards[i].card);
+    const bestPower = getCardPower(best.card, dragonSuit);
+    const power = getCardPower(cards[i].card, dragonSuit);
+    if (score < bestScore || (score === bestScore && power < bestPower)) best = cards[i];
+  }
+  return best;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Card Counting - track all seen cards
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Count all seen cards from the bot's perspective.
+ * "Seen" = face-up table cards (both players), played cards, and own hand.
+ * @param {object} state
+ * @param {'p1'|'p2'} botId
+ * @returns {Set<string>} Set of "rank+suit" strings of seen cards
+ */
+function getSeenCardKeys(state, botId) {
+  const seen = new Set();
+
+  const addCard = (card) => {
+    if (!card) return;
+    seen.add(isJoker(card) ? card.rank : card.rank + card.suit);
+  };
+
+  // Bot's own hand
+  state[botId].hand.forEach(addCard);
+
+  // Face-up table cards for both players
+  ['p1', 'p2'].forEach(pid => {
+    state[pid].table.forEach(slot => {
+      if (slot.face) addCard(slot.face);
+    });
+  });
+
+  // Played cards from history
+  state.history.forEach(h => {
+    addCard(h.p1);
+    addCard(h.p2);
+  });
+
+  return seen;
+}
+
+/**
+ * Get remaining unknown cards (all 54 minus seen).
+ * @returns {Array<{rank:string, suit:string}>}
+ */
+function getUnknownCards(seenKeys) {
+  const allCards = [];
+  const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+  for (const suit of SUITS) {
+    for (const rank of ranks) {
+      allCards.push({ rank, suit, key: rank + suit });
+    }
+  }
+  allCards.push({ rank: '小王', suit: '', key: '小王' });
+  allCards.push({ rank: '大王', suit: '', key: '大王' });
+  return allCards.filter(c => !seenKeys.has(c.key));
+}
+
+/**
+ * Count remaining score cards in unknown cards.
+ */
+function countRemainingScoreCards(unknownCards) {
+  let count = 0;
+  let totalPoints = 0;
+  // We can't determine exact ownership, but we know the pool
+  for (const c of unknownCards) {
+    const score = getCardScore(c);
+    if (score > 0) { count++; totalPoints += score; }
+  }
+  return { count, totalPoints };
+}
+
+/**
+ * Estimate if opponent is void in a suit (has no cards of that suit remaining).
+ * If all cards of a suit are accounted for in seen cards + bot's own hand,
+ * the opponent must be void.
+ */
+function estimateOpponentVoid(state, botId, seenKeys) {
+  const oppId = botId === 'p1' ? 'p2' : 'p1';
+  const voidSuits = new Set();
+
+  for (const suit of SUITS) {
+    const allRanks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+    const suitCardsTotal = 13;
+    let seenSuitCount = 0;
+
+    // Count how many of this suit we've seen
+    for (const rank of allRanks) {
+      if (seenKeys.has(rank + suit)) seenSuitCount++;
+    }
+
+    // Count how many of this suit the bot itself has
+    const botHandSuit = state[botId].hand.filter(c => c.suit === suit).length;
+    const botTableSuit = state[botId].table.filter(s => s.face && s.face.suit === suit).length;
+    const botDownSuit = state[botId].table.filter(s => s.down && s.down.suit === suit).length;
+    const botTotalSuit = botHandSuit + botTableSuit + botDownSuit;
+
+    const known = seenSuitCount + botTotalSuit;
+
+    // If all 13 cards of this suit are accounted for, opponent has none
+    if (known >= suitCardsTotal) {
+      voidSuits.add(suit);
+    }
+
+    // Also check if opponent's face table cards show they're out
+    const oppFaceCards = state[oppId].table
+      .filter(s => s.face)
+      .map(s => s.face.suit);
+    const oppHasThisSuit = oppFaceCards.some(s => s === suit);
+    if (!oppHasThisSuit) {
+      // Opponent might still have it in hand or down cards
+    }
+  }
+
+  return voidSuits;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Preference: prefer face/source from table over hand
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Given a choice between equivalent cards, prefer playing from
+ * table (face cards) to reveal down cards.
+ */
+function preferTableOverHand(a, b) {
+  if (a.type === 'face' && b.type === 'hand') return -1;
+  if (a.type === 'hand' && b.type === 'face') return 1;
+  return 0;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// chooseCard
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Normal bot with improved strategy:
+ *   - Card counting (tracks all seen cards)
+ *   - Table-first: prefer playing face-up table cards
+ *   - Strategic dumping: play low-value cards when opponent leads high
+ *   - Endgame aggression: race for points in final rounds
+ *   - Void detection: infer opponent's empty suits
+ *   - No opponent hand peeking
+ *
+ * @param {object} state
+ * @param {'p1'|'p2'} playerId
+ * @param {object|null} leadCard
+ * @returns {{ type: 'hand'|'face', index: number }|null}
+ */
+function normalChoose(state, playerId, leadCard) {
+  const player = state[playerId];
+  const dragonSuit = state.dragonSuit;
+  const opponent = playerId === 'p1' ? state.p2 : state.p1;
+  const playable = getLegalMoves(player, leadCard, dragonSuit);
+
+  if (playable.length === 0) return null;
+
+  // Compute game context
+  const seenKeys = getSeenCardKeys(state, playerId);
+  const unknown = getUnknownCards(seenKeys);
+  const remainingScore = countRemainingScoreCards(unknown);
+  const roundsLeft = TOTAL_ROUNDS - state.round + 1;
+  const isEndgame = roundsLeft <= 5;
+
+  if (leadCard) {
+    return chooseFollowCard(state, playerId, leadCard, playable, {
+      seenKeys, unknown, remainingScore, roundsLeft, isEndgame,
+    });
+  } else {
+    return chooseLeadCard(state, playerId, playable, {
+      seenKeys, unknown, remainingScore, roundsLeft, isEndgame,
+    });
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Following Strategy
+// ─────────────────────────────────────────────────────────────────
+
+function chooseFollowCard(state, playerId, leadCard, playable, ctx) {
+  const dragonSuit = state.dragonSuit;
+  const { isEndgame, remainingScore } = ctx;
+
+  const winners = playable.filter(a => canSecondCardWin(leadCard, a.card, dragonSuit));
+  const losers = playable.filter(a => !canSecondCardWin(leadCard, a.card, dragonSuit));
+  const scoreWinners = winners.filter(a => getCardScore(a.card) > 0);
+  const leadHasScore = getCardScore(leadCard) > 0;
+
+  // ═══ Endgame: aggressive score capture ═══
+  if (isEndgame || remainScoreCritical(remainingScore, leadHasScore)) {
+    if (leadHasScore && winners.length > 0) {
+      // Must capture — play lowest winner (prefer face to reveal cards)
+      const best = chooseLowestPower(
+        scoreWinners.length > 0 ? scoreWinners : winners,
+        dragonSuit
+      );
+      // If table and hand options exist, prefer table
+      const tableWinners = winners.filter(w => w.type === 'face');
+      return tableWinners.length > 0
+        ? applyTablePreference(best, tableWinners, dragonSuit)
+        : best;
+    }
+    if (scoreWinners.length > 0) {
+      return chooseLowestScoreCard(scoreWinners, dragonSuit);
+    }
+    // Lead card is non-score: try to lose with lowest non-score
+    const nonScoreLosers = losers.filter(a => getCardScore(a.card) === 0);
+    if (nonScoreLosers.length > 0) {
+      return applyTablePreference(
+        chooseHighestPower(nonScoreLosers, dragonSuit),
+        nonScoreLosers,
+        dragonSuit
+      );
+    }
+    // Must lose with a score card — play lowest score card
+    return chooseLowestScoreCard(losers.length > 0 ? losers : playable, dragonSuit);
+  }
+
+  // ═══ Normal play ═══
+  // Lead card has points: try to capture if possible
+  if (leadHasScore && winners.length > 0) {
+    const best = scoreWinners.length > 0
+      ? chooseLowestScoreCard(scoreWinners, dragonSuit)
+      : chooseLowestPower(winners, dragonSuit);
+    return applyTablePreference(best, winners, dragonSuit);
+  }
+
+  // Can win and it's with a score card: go for it
+  if (scoreWinners.length > 0) {
+    return chooseLowestScoreCard(scoreWinners, dragonSuit);
+  }
+
+  // Lead card is non-score and we can't win with score:
+  // dump lowest non-score loser, prefer table cards
+  const nonScoreLosers = losers.filter(a => getCardScore(a.card) === 0);
+  if (nonScoreLosers.length > 0) {
+    // Prefer playing higher-ranked losers over lower to save weak cards for later
+    return applyTablePreference(
+      chooseHighestPower(nonScoreLosers, dragonSuit),
+      nonScoreLosers,
+      dragonSuit
+    );
+  }
+
+  // Default: play lowest losing card
+  const def = losers.length > 0
+    ? chooseLowestPower(losers, dragonSuit)
+    : chooseLowestPower(playable, dragonSuit);
+  return applyTablePreference(def, playable, dragonSuit);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Leading Strategy
+// ─────────────────────────────────────────────────────────────────
+
+function chooseLeadCard(state, playerId, playable, ctx) {
+  const dragonSuit = state.dragonSuit;
+  const { isEndgame, remainingScore } = ctx;
+
+  const opponent = playerId === 'p1' ? state.p2 : state.p1;
+  const privileged = playable.filter(a => isPrivileged(a.card, dragonSuit));
+  const scoreCards = playable.filter(a => getCardScore(a.card) > 0);
+
+  // ═══ Endgame: maximize score ═══
+  if (isEndgame) {
+    // Lead with privileged score cards to safely gain points
+    const privScore = privileged.filter(a => getCardScore(a.card) > 0);
+    if (privScore.length > 0) {
+      return chooseLowestScoreCard(privScore, dragonSuit);
+    }
+    // If no privileged score, lead with lowest privileged to get follow-suit advantage
+    if (privileged.length > 0) {
+      return chooseLowestPower(privileged, dragonSuit);
+    }
+    // Desperate: lead lowest score card
+    if (scoreCards.length > 0) {
+      return chooseLowestScoreCard(scoreCards, dragonSuit);
+    }
+    // Just play lowest
+    return chooseLowestPower(playable, dragonSuit);
+  }
+
+  // ═══ Normal play ═══
+  // Lead with privileged score cards (safe — opponent must follow suit or can't win)
+  const privScore = privileged.filter(a => getCardScore(a.card) > 0);
+  if (privScore.length > 0) {
+    return chooseLowestScoreCard(privScore, dragonSuit);
+  }
+
+  // If all playable cards are score cards, play smallest (no choice)
+  if (scoreCards.length > 0 && scoreCards.length === playable.length) {
+    return chooseLowestScoreCard(playable, dragonSuit);
+  }
+
+  // Lead lowest privileged non-score (to bait opponent or set up control)
+  const privNonScore = privileged.filter(a => getCardScore(a.card) === 0);
+  if (privNonScore.length > 0) {
+    return chooseLowestPower(privNonScore, dragonSuit);
+  }
+
+  // Lead lowest non-score, non-privileged card (dump weak cards)
+  const nonScoreNonPriv = playable.filter(
+    a => getCardScore(a.card) === 0 && !isPrivileged(a.card, dragonSuit)
+  );
+  if (nonScoreNonPriv.length > 0) {
+    return applyTablePreference(
+      chooseLowestPower(nonScoreNonPriv, dragonSuit),
+      nonScoreNonPriv,
+      dragonSuit
+    );
+  }
+
+  // Fallback: lowest non-score, prefer table
+  const nonScore = playable.filter(a => getCardScore(a.card) === 0);
+  const chosen = nonScore.length > 0
+    ? chooseLowestPower(nonScore, dragonSuit)
+    : chooseLowestPower(playable, dragonSuit);
+  return applyTablePreference(chosen, playable, dragonSuit);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Utility: remainScoreCritical — check if remaining score is high
+// ─────────────────────────────────────────────────────────────────
+
+function remainScoreCritical(remainingScore, leadHasScore) {
+  // If there are still many points unaccounted for, play more aggressively
+  return remainingScore.totalPoints >= 40; // 40% of total 100 points still in play
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Table preference: if we have a choice, prefer table face cards
+// to reveal down cards
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * If there's a table-card option among the alternatives that's equivalent
+ * in power/score, prefer it. Otherwise stick with the chosen card.
+ */
+function applyTablePreference(chosen, alternatives, dragonSuit) {
+  if (chosen.type === 'face') return chosen; // already from table
+
+  // Check if there's a face-up table card roughly equivalent to what we chose
+  const powerChosen = getCardPower(chosen.card, dragonSuit);
+  const tableCards = alternatives.filter(a => a.type === 'face');
+
+  if (tableCards.length === 0) return chosen;
+
+  // Prefer table cards that are close in power (±3 range) or lower power
+  for (const tc of tableCards) {
+    const powerTC = getCardPower(tc.card, dragonSuit);
+    if (Math.abs(powerTC - powerChosen) <= 3) {
+      return tc;
+    }
+  }
+
+  // If no close match, just return the original choice
+  return chosen;
+}
+
+// ── src/ai/V3-search.js ──────────────────────────────────────
+
+// ═══════════════════════════════════════════════════════════════════
+// V3-search.js — Determinized Alpha-Beta Search Bot
+// ═══════════════════════════════════════════════════════════════════
+//
+// 策略：Determinizated Alpha-Beta
+// 特点：
+//   采样多个「完备信息世界」，对每个世界做 alpha-beta 搜索，
+//   聚合出最优走法。
+//
+// 配置参数：
+//   sampleCount   - 采样世界数（默认 100）
+//   depth         - 搜索深度（ply，默认 6）
+//   timeLimitMs   - 每步时间上限（默认 1000ms）
+//   endgameDepth  - 残局深度（剩余 ≤5 轮时，默认 8）
+// ═══════════════════════════════════════════════════════════════════
+
+// ── 配置 ──────────────────────────────────────────────────────
+
+const V3_CONFIG = {
+  sampleCount: 50,      // 采样世界数
+  depth: 4,             // 搜索深度（ply）
+  timeLimitMs: 500,     // 每步时间上限
+  endgameDepth: 6,      // 残局深度
+  endgameThreshold: 5,
+};
+
+// ── 局面评估 ──────────────────────────────────────────────────
+
+/**
+ * 手工启发式评价函数。
+ * 正值表示对 botId 有利，负值表示对对手有利。
+ */
+function evaluate(state, botId) {
+  const oppId = botId === 'p1' ? 'p2' : 'p1';
+  const bot = state[botId];
+  const opp = state[oppId];
+  const { dragonSuit, round } = state;
+  const roundsLeft = TOTAL_ROUNDS - round + 1;
+
+  let score = 0;
+
+  // 1. 已得分差距（最重要）
+  score += (bot.score - opp.score) * 100;
+
+  // 2. 手牌数量优势
+  score += (bot.hand.length - opp.hand.length) * 5;
+
+  // 3. 桌面牌数量（包含已翻开的 down 牌）
+  const botFaceCards = bot.table.filter(s => s.face).length;
+  const oppFaceCards = opp.table.filter(s => s.face).length;
+  score += (botFaceCards - oppFaceCards) * 3;
+
+  // 4. 天龙人特权手牌
+  const botPriv = bot.hand.filter(c => isPrivileged(c, dragonSuit)).length;
+  const oppPriv = opp.hand.filter(c => isPrivileged(c, dragonSuit)).length;
+  score += (botPriv - oppPriv) * 15;
+
+  // 5. 分数牌持有
+  const botScoreCards = bot.hand.filter(c => getCardScore(c) > 0).length;
+  const oppScoreCards = opp.hand.filter(c => getCardScore(c) > 0).length;
+  score += (botScoreCards - oppScoreCards) * 20;
+
+  // 6. 特权分数牌（最危险——对方出分牌时我方特权牌可稳赢）
+  const botPrivScore = bot.hand.filter(c => isPrivileged(c, dragonSuit) && getCardScore(c) > 0).length;
+  const oppPrivScore = opp.hand.filter(c => isPrivileged(c, dragonSuit) && getCardScore(c) > 0).length;
+  score += (botPrivScore - oppPrivScore) * 30;
+
+  // 7. 桌面明牌中的分数牌（即将被用来出牌）
+  const botFaceScore = bot.table.filter(s => s.face && getCardScore(s.face) > 0).length;
+  const oppFaceScore = opp.table.filter(s => s.face && getCardScore(s.face) > 0).length;
+  score += (botFaceScore - oppFaceScore) * 10;
+
+  // 8. 王持有——最强特权牌
+  const botJokers = bot.hand.filter(c => isJoker(c)).length;
+  const oppJokers = opp.hand.filter(c => isJoker(c)).length;
+  score += (botJokers - oppJokers) * 25;
+
+  // 9. 剩余轮数因子——残局时领先优势放大
+  if (roundsLeft <= 5) {
+    score = score * 1.5;
+  }
+
+  // 10. 距离游戏结束的紧迫度
+  if (roundsLeft <= 3) {
+    // 此时手牌越少说明消耗得越好
+    score += (opp.hand.length - bot.hand.length) * 3;
+  }
+
+  return score;
+}
+
+// ── Hidden Card Sampler ───────────────────────────────────────
+
+/**
+ * 从 bot 视角构建已知牌集合。
+ * 已知牌 = bot 的完整手牌+桌面 + 对手桌面明牌 + 已出牌
+ * 未知牌 = 54 张标准牌 − 已知牌
+ */
+function getUnknownCards(state, botId) {
+  const oppId = botId === 'p1' ? 'p2' : 'p1';
+  const deck = createDeck(); // 标准 54 张
+  const seenKeys = new Set();
+
+  function addCard(card) {
+    if (card && card.suit !== undefined) {
+      seenKeys.add(card.rank + card.suit);
+    }
+  }
+
+  // Bot 自己的所有牌（已知）
+  const bot = state[botId];
+  bot.hand.forEach(addCard);
+  bot.table.forEach(slot => {
+    if (slot.face) addCard(slot.face);
+    if (slot.down) addCard(slot.down);
+  });
+
+  // 对手桌面明牌（已知）
+  const opp = state[oppId];
+  opp.table.forEach(slot => {
+    if (slot.face) addCard(slot.face);
+  });
+
+  // 已出牌（已知）
+  if (state.allPlayedCards) {
+    state.allPlayedCards.forEach(addCard);
+  }
+  if (state.playedP1) addCard(state.playedP1);
+  if (state.playedP2) addCard(state.playedP2);
+
+  // 未知牌 = deck 中不在 seenKeys 的牌
+  return deck.filter(c => !seenKeys.has(c.rank + c.suit));
+}
+
+/**
+ * 采样一个完备信息世界。
+ * 将未知牌随机填入对手的隐藏区域（手牌 + 面下牌）。
+ */
+function sampleWorld(state, botId) {
+  const unknown = getUnknownCards(state, botId);
+  // 洗牌
+  const shuffled = [...unknown];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  const oppId = botId === 'p1' ? 'p2' : 'p1';
+  const sample = cloneState(state);
+  const opp = sample[oppId];
+  let idx = 0;
+
+  // 填对手手牌
+  for (let i = 0; i < opp.hand.length; i++) {
+    opp.hand[i] = shuffled[idx++];
+  }
+
+  // 填对手面下牌
+  for (let i = 0; i < opp.table.length; i++) {
+    if (opp.table[i].down) {
+      opp.table[i].down = shuffled[idx++];
+    }
+  }
+
+  return sample;
+}
+
+// ── Alpha-Beta 搜索 ───────────────────────────────────────────
+
+/**
+ * 获取当前该谁出牌。
+ */
+function getCurrentPlayer(state) {
+  if (state.phase !== 'select') return null;
+  if (state.playedP1 === null && state.playedP2 === null) {
+    return state.firstPlayer === 1 ? 'p1' : 'p2';
+  }
+  if (state.playedP1 !== null && state.playedP2 === null) return 'p2';
+  if (state.playedP2 !== null && state.playedP1 === null) return 'p1';
+  return null;
+}
+
+function getLeadCard(state, playerId) {
+  const oppId = playerId === 'p1' ? 'p2' : 'p1';
+  if (state[oppId] && state.playedP1 !== null && state.playedP2 !== null) {
+    // Both played — should not happen in select phase
+    return null;
+  }
+  if (playerId === 'p1' && state.playedP2) return state.playedP2;
+  if (playerId === 'p2' && state.playedP1) return state.playedP1;
+  return null;
+}
+
+/**
+ * 走法排序：优先搜索更好的走法（提高剪枝效率）。
+ */
+function orderMoves(moves, state, playerId) {
+  return moves.sort((a, b) => {
+    const cardA = a.card || state[playerId].hand[a.index] || (state[playerId].table[a.index]?.face);
+    const cardB = b.card || state[playerId].hand[b.index] || (state[playerId].table[b.index]?.face);
+    if (!cardA || !cardB) return 0;
+
+    // 优先出分数牌
+    const scoreA = getCardScore(cardA);
+    const scoreB = getCardScore(cardB);
+    if (scoreA !== scoreB) return scoreB - scoreA;
+
+    // 其次出特权牌
+    const privA = isPrivileged(cardA, state.dragonSuit) ? 1 : 0;
+    const privB = isPrivileged(cardB, state.dragonSuit) ? 1 : 0;
+    if (privA !== privB) return privB - privA;
+
+    // 再按牌力排序（大牌优先尝试）
+    return getCardPower(cardB, state.dragonSuit) - getCardPower(cardA, state.dragonSuit);
+  });
+}
+
+/**
+ * 模拟走完一轮（两方出牌 + 结算 + 推进）。
+ */
+function simulateRound(state, playerId, move) {
+  let ns = applyMove(cloneState(state), playerId, move);
+
+  // 如果双方都已出牌，结算
+  if (ns.playedP1 !== null && ns.playedP2 !== null) {
+    ns = resolveRound(ns);
+    if (ns.phase === 'reveal' && ns.round < TOTAL_ROUNDS) {
+      ns = advanceRound(ns);
+    }
+  }
+  return ns;
+}
+
+/**
+ * Alpha-Beta 搜索核心。
+ */
+function alphaBeta(state, depth, alpha, beta, botId, startTime) {
+  // 时间限制
+  if (Date.now() - startTime > V3_CONFIG.timeLimitMs) {
+    return evaluate(state, botId);
+  }
+
+  if (depth <= 0 || state.phase === 'gameover') {
+    return evaluate(state, botId);
+  }
+
+  const playerId = getCurrentPlayer(state);
+  if (!playerId) return evaluate(state, botId);
+
+  const leadCard = getLeadCard(state, playerId);
+  let moves = getLegalMoves(state[playerId], leadCard, state.dragonSuit);
+
+  if (!moves || moves.length === 0) return evaluate(state, botId);
+
+  // 走法排序
+  moves = orderMoves(moves, state, playerId);
+
+  const isBot = playerId === botId;
+
+  if (isBot) {
+    // 最大化节点（bot 自己的走法）
+    let bestValue = -Infinity;
+    for (const move of moves) {
+      const ns = simulateRound(state, playerId, move);
+      const val = alphaBeta(ns, depth - 1, alpha, beta, botId, startTime);
+      bestValue = Math.max(bestValue, val);
+      alpha = Math.max(alpha, val);
+      if (beta <= alpha) break; // Beta 剪枝
+    }
+    return bestValue;
+  } else {
+    // 最小化节点（对手的走法）
+    let bestValue = Infinity;
+    for (const move of moves) {
+      const ns = simulateRound(state, playerId, move);
+      const val = alphaBeta(ns, depth - 1, alpha, beta, botId, startTime);
+      bestValue = Math.min(bestValue, val);
+      beta = Math.min(beta, val);
+      if (beta <= alpha) break; // Alpha 剪枝
+    }
+    return bestValue;
+  }
+}
+
+/**
+ * 在单个采样世界上搜索最优走法。
+ */
+function searchBestMove(state, botId, depth, startTime) {
+  const playerId = getCurrentPlayer(state);
+  if (!playerId || playerId !== botId) return null;
+
+  const leadCard = getLeadCard(state, playerId);
+  const moves = getLegalMoves(state[playerId], leadCard, state.dragonSuit);
+  if (!moves || moves.length === 0) return null;
+
+  let bestMove = moves[0];
+  let bestValue = -Infinity;
+
+  for (const move of orderMoves(moves, state, playerId)) {
+    if (Date.now() - startTime > V3_CONFIG.timeLimitMs) break;
+
+    const ns = simulateRound(state, playerId, move);
+    const val = alphaBeta(ns, depth - 1, -Infinity, Infinity, botId, startTime);
+
+    if (val > bestValue) {
+      bestValue = val;
+      bestMove = move;
+    }
+  }
+
+  return bestMove;
+}
+
+// ── Determinized Search Bot ────────────────────────────────────
+
+/**
+ * V3 主入口：Determinizated Alpha-Beta Search。
+ *
+ * @param {object} state - 当前游戏状态
+ * @param {'p1'|'p2'} playerId - 哪个玩家是 bot
+ * @param {object|null} leadCard - 先手出的牌（跟牌时）
+ * @returns {{ type: 'hand'|'face', index: number }|null}
+ */
+function V3Choose(state, playerId, leadCard) {
+  const startTime = Date.now();
+
+  // 如果 bot 不是当前行动方，不决策
+  if (getCurrentPlayer(state) !== playerId) return null;
+
+  // 简单走法：仅有 1 个合法走法时直接返回
+  const moves = getLegalMoves(state[playerId], leadCard, state.dragonSuit);
+  if (!moves || moves.length === 0) return null;
+  if (moves.length === 1) return moves[0];
+
+  // 残局时增加搜索深度
+  const roundsLeft = TOTAL_ROUNDS - state.round + 1;
+  const depth = roundsLeft <= V3_CONFIG.endgameThreshold
+    ? V3_CONFIG.endgameDepth
+    : V3_CONFIG.depth;
+
+  // 投票统计：每个采样世界投票支持哪个走法
+  const voteMap = new Map();
+  moves.forEach(m => voteMap.set(`${m.type}-${m.index}`, { move: m, votes: 0, totalValue: 0 }));
+
+  const sampleCount = Math.min(V3_CONFIG.sampleCount, 200); // 上限 200
+
+  for (let s = 0; s < sampleCount; s++) {
+    if (Date.now() - startTime > V3_CONFIG.timeLimitMs * 0.8) break;
+
+    // 1. 采样一个完备信息世界
+    const world = sampleWorld(state, playerId);
+
+    // 2. 在该世界上搜索最优走法
+    const best = searchBestMove(world, playerId, depth, startTime);
+    if (best) {
+      const key = `${best.type}-${best.index}`;
+      const entry = voteMap.get(key);
+      if (entry) {
+        entry.votes++;
+        // 用搜索得到的评价值加权
+        // （被更高 eval 选中的走法权重大）
+      }
+    }
+  }
+
+  // 胜者：得票最多的走法；平局时用 evaluation 值排序
+  let bestEntry = null;
+  let maxVotes = -1;
+  for (const entry of voteMap.values()) {
+    if (entry.votes > maxVotes) {
+      maxVotes = entry.votes;
+      bestEntry = entry;
+    }
+  }
+
+  if (!bestEntry) return moves[0];
+  return bestEntry.move;
+}
+
+// ── src/ai/V3-high.js ──────────────────────────────────────
+
+// ═══════════════════════════════════════════════════════════════════
+// V3-search.js — Determinized Alpha-Beta Search Bot
+// ═══════════════════════════════════════════════════════════════════
+//
+// 策略：Determinizated Alpha-Beta
+// 特点：
+//   采样多个「完备信息世界」，对每个世界做 alpha-beta 搜索，
+//   聚合出最优走法。
+//
+// 配置参数：
+//   sampleCount   - 采样世界数（默认 100）
+//   depth         - 搜索深度（ply，默认 6）
+//   timeLimitMs   - 每步时间上限（默认 1000ms）
+//   endgameDepth  - 残局深度（剩余 ≤5 轮时，默认 8）
+// ═══════════════════════════════════════════════════════════════════
+
+// ── 配置 ──────────────────────────────────────────────────────
+
+const V3_HIGH_CONFIG = {
+  sampleCount: 100,      // 采样世界数（线上用 50，批量测试可调高）
+  depth: 6,             // 搜索深度（ply，线上 4ply ≈ 0.5s）
+  timeLimitMs: 1000,     // 每步时间上限
+  endgameDepth: 8,      // 残局深度
+  endgameThreshold: 5,  // 剩余 ≤ 5 轮进入残局模式
+};
+
+// ── 局面评估 ──────────────────────────────────────────────────
+
+/**
+ * 手工启发式评价函数。
+ * 正值表示对 botId 有利，负值表示对对手有利。
+ */
+function evaluate(state, botId) {
+  const oppId = botId === 'p1' ? 'p2' : 'p1';
+  const bot = state[botId];
+  const opp = state[oppId];
+  const { dragonSuit, round } = state;
+  const roundsLeft = TOTAL_ROUNDS - round + 1;
+
+  let score = 0;
+
+  // 1. 已得分差距（最重要）
+  score += (bot.score - opp.score) * 100;
+
+  // 2. 手牌数量优势
+  score += (bot.hand.length - opp.hand.length) * 5;
+
+  // 3. 桌面牌数量（包含已翻开的 down 牌）
+  const botFaceCards = bot.table.filter(s => s.face).length;
+  const oppFaceCards = opp.table.filter(s => s.face).length;
+  score += (botFaceCards - oppFaceCards) * 3;
+
+  // 4. 天龙人特权手牌
+  const botPriv = bot.hand.filter(c => isPrivileged(c, dragonSuit)).length;
+  const oppPriv = opp.hand.filter(c => isPrivileged(c, dragonSuit)).length;
+  score += (botPriv - oppPriv) * 15;
+
+  // 5. 分数牌持有
+  const botScoreCards = bot.hand.filter(c => getCardScore(c) > 0).length;
+  const oppScoreCards = opp.hand.filter(c => getCardScore(c) > 0).length;
+  score += (botScoreCards - oppScoreCards) * 20;
+
+  // 6. 特权分数牌（最危险——对方出分牌时我方特权牌可稳赢）
+  const botPrivScore = bot.hand.filter(c => isPrivileged(c, dragonSuit) && getCardScore(c) > 0).length;
+  const oppPrivScore = opp.hand.filter(c => isPrivileged(c, dragonSuit) && getCardScore(c) > 0).length;
+  score += (botPrivScore - oppPrivScore) * 30;
+
+  // 7. 桌面明牌中的分数牌（即将被用来出牌）
+  const botFaceScore = bot.table.filter(s => s.face && getCardScore(s.face) > 0).length;
+  const oppFaceScore = opp.table.filter(s => s.face && getCardScore(s.face) > 0).length;
+  score += (botFaceScore - oppFaceScore) * 10;
+
+  // 8. 王持有——最强特权牌
+  const botJokers = bot.hand.filter(c => isJoker(c)).length;
+  const oppJokers = opp.hand.filter(c => isJoker(c)).length;
+  score += (botJokers - oppJokers) * 25;
+
+  // 9. 剩余轮数因子——残局时领先优势放大
+  if (roundsLeft <= 5) {
+    score = score * 1.5;
+  }
+
+  // 10. 距离游戏结束的紧迫度
+  if (roundsLeft <= 3) {
+    // 此时手牌越少说明消耗得越好
+    score += (opp.hand.length - bot.hand.length) * 3;
+  }
+
+  return score;
+}
+
+// ── Hidden Card Sampler ───────────────────────────────────────
+
+/**
+ * 从 bot 视角构建已知牌集合。
+ * 已知牌 = bot 的完整手牌+桌面 + 对手桌面明牌 + 已出牌
+ * 未知牌 = 54 张标准牌 − 已知牌
+ */
+function getUnknownCards(state, botId) {
+  const oppId = botId === 'p1' ? 'p2' : 'p1';
+  const deck = createDeck(); // 标准 54 张
+  const seenKeys = new Set();
+
+  function addCard(card) {
+    if (card && card.suit !== undefined) {
+      seenKeys.add(card.rank + card.suit);
+    }
+  }
+
+  // Bot 自己的所有牌（已知）
+  const bot = state[botId];
+  bot.hand.forEach(addCard);
+  bot.table.forEach(slot => {
+    if (slot.face) addCard(slot.face);
+    if (slot.down) addCard(slot.down);
+  });
+
+  // 对手桌面明牌（已知）
+  const opp = state[oppId];
+  opp.table.forEach(slot => {
+    if (slot.face) addCard(slot.face);
+  });
+
+  // 已出牌（已知）
+  if (state.allPlayedCards) {
+    state.allPlayedCards.forEach(addCard);
+  }
+  if (state.playedP1) addCard(state.playedP1);
+  if (state.playedP2) addCard(state.playedP2);
+
+  // 未知牌 = deck 中不在 seenKeys 的牌
+  return deck.filter(c => !seenKeys.has(c.rank + c.suit));
+}
+
+/**
+ * 采样一个完备信息世界。
+ * 将未知牌随机填入对手的隐藏区域（手牌 + 面下牌）。
+ */
+function sampleWorld(state, botId) {
+  const unknown = getUnknownCards(state, botId);
+  // 洗牌
+  const shuffled = [...unknown];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  const oppId = botId === 'p1' ? 'p2' : 'p1';
+  const sample = cloneState(state);
+  const opp = sample[oppId];
+  let idx = 0;
+
+  // 填对手手牌
+  for (let i = 0; i < opp.hand.length; i++) {
+    opp.hand[i] = shuffled[idx++];
+  }
+
+  // 填对手面下牌
+  for (let i = 0; i < opp.table.length; i++) {
+    if (opp.table[i].down) {
+      opp.table[i].down = shuffled[idx++];
+    }
+  }
+
+  return sample;
+}
+
+// ── Alpha-Beta 搜索 ───────────────────────────────────────────
+
+/**
+ * 获取当前该谁出牌。
+ */
+function getCurrentPlayer(state) {
+  if (state.phase !== 'select') return null;
+  if (state.playedP1 === null && state.playedP2 === null) {
+    return state.firstPlayer === 1 ? 'p1' : 'p2';
+  }
+  if (state.playedP1 !== null && state.playedP2 === null) return 'p2';
+  if (state.playedP2 !== null && state.playedP1 === null) return 'p1';
+  return null;
+}
+
+function getLeadCard(state, playerId) {
+  const oppId = playerId === 'p1' ? 'p2' : 'p1';
+  if (state[oppId] && state.playedP1 !== null && state.playedP2 !== null) {
+    // Both played — should not happen in select phase
+    return null;
+  }
+  if (playerId === 'p1' && state.playedP2) return state.playedP2;
+  if (playerId === 'p2' && state.playedP1) return state.playedP1;
+  return null;
+}
+
+/**
+ * 走法排序：优先搜索更好的走法（提高剪枝效率）。
+ */
+function orderMoves(moves, state, playerId) {
+  return moves.sort((a, b) => {
+    const cardA = a.card || state[playerId].hand[a.index] || (state[playerId].table[a.index]?.face);
+    const cardB = b.card || state[playerId].hand[b.index] || (state[playerId].table[b.index]?.face);
+    if (!cardA || !cardB) return 0;
+
+    // 优先出分数牌
+    const scoreA = getCardScore(cardA);
+    const scoreB = getCardScore(cardB);
+    if (scoreA !== scoreB) return scoreB - scoreA;
+
+    // 其次出特权牌
+    const privA = isPrivileged(cardA, state.dragonSuit) ? 1 : 0;
+    const privB = isPrivileged(cardB, state.dragonSuit) ? 1 : 0;
+    if (privA !== privB) return privB - privA;
+
+    // 再按牌力排序（大牌优先尝试）
+    return getCardPower(cardB, state.dragonSuit) - getCardPower(cardA, state.dragonSuit);
+  });
+}
+
+/**
+ * 模拟走完一轮（两方出牌 + 结算 + 推进）。
+ */
+function simulateRound(state, playerId, move) {
+  let ns = applyMove(cloneState(state), playerId, move);
+
+  // 如果双方都已出牌，结算
+  if (ns.playedP1 !== null && ns.playedP2 !== null) {
+    ns = resolveRound(ns);
+    if (ns.phase === 'reveal' && ns.round < TOTAL_ROUNDS) {
+      ns = advanceRound(ns);
+    }
+  }
+  return ns;
+}
+
+/**
+ * Alpha-Beta 搜索核心。
+ */
+function alphaBeta(state, depth, alpha, beta, botId, startTime) {
+  // 时间限制
+  if (Date.now() - startTime > V3_HIGH_CONFIG.timeLimitMs) {
+    return evaluate(state, botId);
+  }
+
+  if (depth <= 0 || state.phase === 'gameover') {
+    return evaluate(state, botId);
+  }
+
+  const playerId = getCurrentPlayer(state);
+  if (!playerId) return evaluate(state, botId);
+
+  const leadCard = getLeadCard(state, playerId);
+  let moves = getLegalMoves(state[playerId], leadCard, state.dragonSuit);
+
+  if (!moves || moves.length === 0) return evaluate(state, botId);
+
+  // 走法排序
+  moves = orderMoves(moves, state, playerId);
+
+  const isBot = playerId === botId;
+
+  if (isBot) {
+    // 最大化节点（bot 自己的走法）
+    let bestValue = -Infinity;
+    for (const move of moves) {
+      const ns = simulateRound(state, playerId, move);
+      const val = alphaBeta(ns, depth - 1, alpha, beta, botId, startTime);
+      bestValue = Math.max(bestValue, val);
+      alpha = Math.max(alpha, val);
+      if (beta <= alpha) break; // Beta 剪枝
+    }
+    return bestValue;
+  } else {
+    // 最小化节点（对手的走法）
+    let bestValue = Infinity;
+    for (const move of moves) {
+      const ns = simulateRound(state, playerId, move);
+      const val = alphaBeta(ns, depth - 1, alpha, beta, botId, startTime);
+      bestValue = Math.min(bestValue, val);
+      beta = Math.min(beta, val);
+      if (beta <= alpha) break; // Alpha 剪枝
+    }
+    return bestValue;
+  }
+}
+
+/**
+ * 在单个采样世界上搜索最优走法。
+ */
+function searchBestMove(state, botId, depth, startTime) {
+  const playerId = getCurrentPlayer(state);
+  if (!playerId || playerId !== botId) return null;
+
+  const leadCard = getLeadCard(state, playerId);
+  const moves = getLegalMoves(state[playerId], leadCard, state.dragonSuit);
+  if (!moves || moves.length === 0) return null;
+
+  let bestMove = moves[0];
+  let bestValue = -Infinity;
+
+  for (const move of orderMoves(moves, state, playerId)) {
+    if (Date.now() - startTime > V3_HIGH_CONFIG.timeLimitMs) break;
+
+    const ns = simulateRound(state, playerId, move);
+    const val = alphaBeta(ns, depth - 1, -Infinity, Infinity, botId, startTime);
+
+    if (val > bestValue) {
+      bestValue = val;
+      bestMove = move;
+    }
+  }
+
+  return bestMove;
+}
+
+// ── Determinized Search Bot ────────────────────────────────────
+
+/**
+ * V3 主入口：Determinizated Alpha-Beta Search。
+ *
+ * @param {object} state - 当前游戏状态
+ * @param {'p1'|'p2'} playerId - 哪个玩家是 bot
+ * @param {object|null} leadCard - 先手出的牌（跟牌时）
+ * @returns {{ type: 'hand'|'face', index: number }|null}
+ */
+function V3HighChoose(state, playerId, leadCard) {
+  const startTime = Date.now();
+
+  // 如果 bot 不是当前行动方，不决策
+  if (getCurrentPlayer(state) !== playerId) return null;
+
+  // 简单走法：仅有 1 个合法走法时直接返回
+  const moves = getLegalMoves(state[playerId], leadCard, state.dragonSuit);
+  if (!moves || moves.length === 0) return null;
+  if (moves.length === 1) return moves[0];
+
+  // 残局时增加搜索深度
+  const roundsLeft = TOTAL_ROUNDS - state.round + 1;
+  const depth = roundsLeft <= V3_HIGH_CONFIG.endgameThreshold
+    ? V3_HIGH_CONFIG.endgameDepth
+    : V3_HIGH_CONFIG.depth;
+
+  // 投票统计：每个采样世界投票支持哪个走法
+  const voteMap = new Map();
+  moves.forEach(m => voteMap.set(`${m.type}-${m.index}`, { move: m, votes: 0, totalValue: 0 }));
+
+  const sampleCount = Math.min(V3_HIGH_CONFIG.sampleCount, 200); // 上限 200
+
+  for (let s = 0; s < sampleCount; s++) {
+    if (Date.now() - startTime > V3_HIGH_CONFIG.timeLimitMs * 0.8) break;
+
+    // 1. 采样一个完备信息世界
+    const world = sampleWorld(state, playerId);
+
+    // 2. 在该世界上搜索最优走法
+    const best = searchBestMove(world, playerId, depth, startTime);
+    if (best) {
+      const key = `${best.type}-${best.index}`;
+      const entry = voteMap.get(key);
+      if (entry) {
+        entry.votes++;
+        // 用搜索得到的评价值加权
+        // （被更高 eval 选中的走法权重大）
+      }
+    }
+  }
+
+  // 胜者：得票最多的走法；平局时用 evaluation 值排序
+  let bestEntry = null;
+  let maxVotes = -1;
+  for (const entry of voteMap.values()) {
+    if (entry.votes > maxVotes) {
+      maxVotes = entry.votes;
+      bestEntry = entry;
+    }
+  }
+
+  if (!bestEntry) return moves[0];
+  return bestEntry.move;
+}
+
+// ── src/ai/V4.js ──────────────────────────────────────
+
+// ═══════════════════════════════════════════════════════════════════
+// V4.js — 混合策略：V3 搜索先手 + V4 启发式后手
+// ═══════════════════════════════════════════════════════════════════
+//
+// 核心发现：
+//   - V3 search 在先手时比 V4 启发式强
+//   - V4 启发式在后手时比 V3 search 强
+//   - 结合两者 = 最佳策略
+// ═══════════════════════════════════════════════════════════════════
+
+// ── 后手策略（启发式，比 V3 search 更强）──
+function followChoose(state, playerId, leadCard) {
+  const player = state[playerId];
+  const { dragonSuit } = state;
+
+  const playable = [
+    ...player.hand.map((c, i) => ({ type: 'hand', index: i, card: c })),
+    ...player.table
+      .map((s, i) => s.face ? { type: 'face', index: i, card: s.face } : null)
+      .filter(Boolean),
+  ];
+
+  if (playable.length === 0) return null;
+
+  // 能赢的牌
+  const winners = playable.filter(a => canSecondCardWin(leadCard, a.card, dragonSuit));
+
+  if (winners.length > 0) {
+    // 先手是分数牌 → 出最小的能赢的牌
+    if (getCardScore(leadCard) > 0) {
+      // 优先出分数牌中的赢家（用分数牌赢分数牌，但出最小的）
+      const scoreWinners = winners.filter(a => getCardScore(a.card) > 0);
+      if (scoreWinners.length > 0) {
+        scoreWinners.sort((a, b) => getCardPower(a.card, dragonSuit) - getCardPower(b.card, dragonSuit));
+        return scoreWinners[0];
+      }
+      // 没有分数牌赢家，出最小的赢家
+      winners.sort((a, b) => getCardPower(a.card, dragonSuit) - getCardPower(b.card, dragonSuit));
+      return winners[0];
+    }
+
+    // 先手不是分数牌 → 出最小的能赢的牌（节省大牌）
+    winners.sort((a, b) => getCardPower(a.card, dragonSuit) - getCardPower(b.card, dragonSuit));
+    return winners[0];
+  }
+
+  // 不能赢：出最小的非分数牌（弃牌保分）
+  const nonScore = playable.filter(a => getCardScore(a.card) === 0);
+  if (nonScore.length > 0) {
+    nonScore.sort((a, b) => getCardPower(a.card, dragonSuit) - getCardPower(b.card, dragonSuit));
+    return nonScore[0];
+  }
+  // 只剩分数牌，出最小的
+  playable.sort((a, b) => getCardPower(a.card, dragonSuit) - getCardPower(b.card, dragonSuit));
+  return playable[0];
+}
+
+// ── V4 主入口：先手用 V3 search，后手用启发式 ──
+function V4Choose(state, playerId, leadCard) {
+  if (!leadCard) {
+    // 先手：用 V3 的搜索（更强）
+    return V3Choose(state, playerId, leadCard);
+  } else {
+    // 后手：用启发式（更强）
+    return followChoose(state, playerId, leadCard);
+  }
+}
+
+// ── src/ai/bot.js ──────────────────────────────────────
+
+// ═══════════════════════════════════════════════════════════════════
+// bot.js - Bot factory
+// ═══════════════════════════════════════════════════════════════════
+
+const BOT_STRATEGIES = {
+  V1: easyChoose,
+  V2: normalChoose,
+  V3: V3Choose,
+  'V3-high': V3HighChoose,
+  V4: V4Choose,
+};
+
+/**
+ * Factory: get a bot move for the given strategy.
+ *
+ * @param {'V1'|'V2'|'V3'} strategyName
+ * @param {object} state - Full game state
+ * @param {'p1'|'p2'} playerId - Which player this bot controls
+ * @param {object|null} leadCard - Card that was led, or null if bot is leading
+ * @returns {{ type: 'hand'|'face', index: number }|null}
+ */
+function getBotMove(strategyName, state, playerId, leadCard) {
+  const fn = BOT_STRATEGIES[strategyName];
+  if (!fn) {
+    console.warn(`Unknown strategy "${strategyName}", falling back to "easy"`);
+    return BOT_STRATEGIES.easy(state, playerId, leadCard);
+  }
+  return fn(state, playerId, leadCard);
+}
+
+// ── src/ui/adapter.js ──────────────────────────────────────
+
+// ═══════════════════════════════════════════════════════════════════
+// adapter.js - UI Adapter: bridges game engine to DOM
+// ═══════════════════════════════════════════════════════════════════
+
+// ── State ────────────────────────────────────────────────────────
+let state = null;
+let autoAdvanceTimer = null;
+let gameRecords = []; // { gameNum, winner, p1Score, p2Score, points }
+let nextFirstPlayer = null; // 上一局获胜者，下一局先手
+
+// ── Init ─────────────────────────────────────────────────────────
+function initGame() {
+  if (autoAdvanceTimer) { clearTimeout(autoAdvanceTimer); autoAdvanceTimer = null; }
+  const opts = { p1: 'V1', p2: 'V3' };
+  if (nextFirstPlayer) opts.firstPlayer = nextFirstPlayer;
+  state = createState(opts);
+  document.getElementById('btn-play').disabled = true;
+  renderAll();
+}
+
+// ── Rendering ────────────────────────────────────────────────────
+
+/** Get the playable cards for the human player (P1) as a Set of "type-index" strings */
+function getPlayableSet() {
+  if (state.phase !== 'select') return new Set();
+  const leadCard = (state.firstPlayer === 2) ? state.playedP2 : null;
+  if (state.firstPlayer === 2 && !leadCard) return new Set();
+  const moves = getLegalMoves(state.p1, leadCard, state.dragonSuit);
+  return new Set(moves.map(m => `${m.type}-${m.index}`));
+}
+
+function renderAll() {
+  renderDragonInfo();
+  renderPlayerZone('p1');
+  renderPlayerZone('p2');
+  renderPlayArea();
+  renderStatus();
+  renderButtons();
+  renderHistory();
+  renderGameRecords();
+  document.querySelector('h1 .ver').textContent = 'v2026.5.3.4';
+}
+
+function renderDragonInfo() {
+  const el = document.getElementById('dragon-info');
+  if (!state.dragonSuit) { el.textContent = ''; return; }
+  const sn = { '♠':'黑桃','♥':'红心','♦':'方块','♣':'梅花' };
+  el.textContent = `🐉 天龙人花色：${state.dragonSuit} ${sn[state.dragonSuit] || ''}（${state.dragonSuit} + 大小鬼 = 15 张特权阶级）`;
+}
+
+function renderPlayerZone(pid) {
+  const p = state[pid];
+  const playableSet = (pid === 'p1') ? getPlayableSet() : new Set();
+
+  // ── Face table ──
+  const faceEl = document.getElementById(`face-${pid}`);
+  faceEl.innerHTML = '';
+  for (let i = 0; i < 10; i++) {
+    const slot = p.table[i];
+    const canSel = pid === 'p1' && slot.face && playableSet.has(`face-${i}`);
+    const ts = makeTableSlotEl(slot, canSel);
+    if (canSel) {
+      const isSel = state.selectedSource && state.selectedSource.type === 'face' && state.selectedSource.index === i;
+      if (isSel) ts.faceEl.classList.add('selected');
+      const fi = i;
+      ts.faceEl.addEventListener('click', () => onCardClick({ type: 'face', index: fi }));
+    }
+    faceEl.appendChild(ts.el);
+  }
+
+  // ── Hand ──
+  const handEl = document.getElementById(`hand-${pid}`);
+  handEl.innerHTML = '';
+  if (pid === 'p1') {
+    p.hand.forEach((card, idx) => {
+      const canSel = playableSet.has(`hand-${idx}`);
+      const el = makeCardEl(card, canSel);
+      if (canSel) {
+        const isSel = state.selectedSource && state.selectedSource.type === 'hand' && state.selectedSource.index === idx;
+        if (isSel) el.classList.add('selected');
+        el.addEventListener('click', () => onCardClick({ type: 'hand', index: idx }));
+      }
+      handEl.appendChild(el);
+    });
+  } else {
+    // P2 hand: face-down stack
+    p.hand.forEach((_, idx) => {
+      const el = makeCardEl(null, false, true);
+      el.style.setProperty('--stack-i', idx);
+      handEl.appendChild(el);
+    });
+    const countEl = document.getElementById('hand-count-p2');
+    if (countEl) countEl.textContent = `${p.hand.length}张`;
+  }
+
+  // First-player badge
+  const badge = document.getElementById(`badge-${pid}`);
+  badge.style.display = (state.phase === 'select' && state.firstPlayer === (pid === 'p1' ? 1 : 2)) ? '' : 'none';
+
+  // Info line
+  const hc = p.hand.length, fc = p.table.filter(s => s.face).length, dc = p.table.filter(s => s.down).length;
+  const sc = pid === 'p1' ? state.p1.score : state.p2.score;
+  document.getElementById(`info-${pid}`).textContent = `手牌: ${hc}张 | 桌面牌: ${fc}张 | 底牌: ${dc}张 | 得分: ${sc}分`;
+
+  renderScorePile(pid);
+}
+
+function renderScorePile(pid) {
+  const el = document.getElementById(`score-pile-${pid}`);
+  const cards = pid === 'p1' ? state.p1.scoreCards : state.p2.scoreCards;
+  const total = pid === 'p1' ? state.p1.score : state.p2.score;
+  const visibleCards = cards.slice(-14);
+  el.innerHTML = '';
+
+  const title = document.createElement('div');
+  title.classList.add('score-pile-title');
+  title.textContent = pid === 'p1' ? '你得分牌' : 'AI得分牌';
+  el.appendChild(title);
+
+  const stack = document.createElement('div');
+  stack.classList.add('score-stack');
+  if (visibleCards.length === 0) {
+    const empty = makeCardEl(null, false, false);
+    empty.classList.add('card', 'empty');
+    stack.appendChild(empty);
+  } else {
+    visibleCards.forEach((card, idx) => {
+      const cardEl = makeCardEl(card);
+      cardEl.style.setProperty('--stack-i', idx);
+      cardEl.style.setProperty('--stack-col', idx % 2);
+      cardEl.style.setProperty('--stack-row', Math.floor(idx / 2));
+      stack.appendChild(cardEl);
+    });
+  }
+  el.appendChild(stack);
+
+  const count = document.createElement('div');
+  count.classList.add('score-count');
+  count.textContent = cards.length ? `${cards.length}张 / ${total}分` : '暂无';
+  el.appendChild(count);
+}
+
+function renderPlayArea() {
+  document.getElementById('played-p1').innerHTML = state.playedP1 ? makeCardEl(state.playedP1).outerHTML : makeEmptyEl().outerHTML;
+  document.getElementById('played-p2').innerHTML = state.playedP2 ? makeCardEl(state.playedP2).outerHTML : makeEmptyEl().outerHTML;
+  const re = document.getElementById('result-banner');
+
+  if (state.phase === 'reveal' && state.roundResult) {
+    const msgs = { p1: `🎉 你得${state.roundScore}分！`, p2: `🤖 AI得${state.roundScore}分！`, tie: `🤝 平！(无人得分)` };
+    re.textContent = msgs[state.roundResult];
+  } else if (state.phase === 'gameover') {
+    if (state.p1.score > state.p2.score) re.textContent = `🏆 你赢了！ ${state.p1.score}:${state.p2.score}`;
+    else if (state.p2.score > state.p1.score) re.textContent = `🤖 AI赢了！ ${state.p1.score}:${state.p2.score}`;
+    else re.textContent = `🤝 平局！ ${state.p1.score}:${state.p2.score}`;
+
+    // 记录本局结果
+    if (!state._recorded) {
+      state._recorded = true;
+      recordGameResult();
+      renderGameRecords();
+    }
+  } else re.textContent = '——';
+}
+
+function renderStatus() {
+  const el = document.getElementById('status-bar');
+  if (state.phase === 'gameover') {
+    el.textContent = `游戏结束！ 你 ${state.p1.score} 分 vs AI ${state.p2.score} 分`;
+    return;
+  }
+  const first = state.firstPlayer === 1 ? '你' : 'AI';
+  if (state.phase === 'select') {
+    const hint = state.firstPlayer === 2 ? '请跟牌（同花色）' : '请选一张牌出';
+    el.textContent = `R${state.round}/27 | 先手：${first} | ${state.p1.score}:${state.p2.score} | ${hint}`;
+  } else {
+    el.textContent = `R${state.round}/27 结果 | 本轮${state.roundScore}分 | 即将自动进入下一回合……`;
+  }
+}
+
+function renderButtons() {
+  const bp = document.getElementById('btn-play');
+  const bc = document.getElementById('btn-continue');
+  const br = document.getElementById('btn-restart');
+  if (state.phase === 'select') {
+    bp.style.display = '';
+    bp.disabled = !state.selectedSource;
+    bc.style.display = 'none';
+    br.style.display = '';
+  } else if (state.phase === 'gameover') {
+    bp.style.display = 'none';
+    bc.style.display = '';
+    br.style.display = '';
+  } else {
+    bp.style.display = 'none';
+    bc.style.display = 'none';
+    br.style.display = '';
+  }
+}
+
+function recordGameResult() {
+  const p1 = state.p1.score;
+  const p2 = state.p2.score;
+  let winner, points;
+  if (p1 > p2) { winner = 'p1'; points = p1 - 50; }
+  else if (p2 > p1) { winner = 'p2'; points = p2 - 50; }
+  else { winner = 'tie'; points = 0; }
+  gameRecords.push({ gameNum: gameRecords.length + 1, winner, p1Score: p1, p2Score: p2, points });
+  // 下一局先手为获胜者，平局不交换
+  if (winner === 'p1') nextFirstPlayer = 1;
+  else if (winner === 'p2') nextFirstPlayer = 2;
+  // tie: nextFirstPlayer 保持不变（null 或上局设置的值）
+}
+
+function renderGameRecords() {
+  const el = document.getElementById('game-records-panel');
+  if (gameRecords.length === 0) {
+    el.innerHTML = '<h3>📊 游戏记录</h3><div style="color:#888;font-size:0.72rem">暂无记录</div>';
+    return;
+  }
+
+  const p1Wins = gameRecords.filter(r => r.winner === 'p1').length;
+  const p2Wins = gameRecords.filter(r => r.winner === 'p2').length;
+  const p1NetPoints = gameRecords.filter(r => r.winner === 'p1').reduce((s, r) => s + r.points, 0);
+  const p2NetPoints = gameRecords.filter(r => r.winner === 'p2').reduce((s, r) => s + r.points, 0);
+  const netScore = p1NetPoints - p2NetPoints;
+
+  let summary;
+  if (p1Wins > p2Wins) {
+    summary = `你的游戏记录是 ${p1Wins}:${p2Wins}，累计赢得 ${Math.abs(netScore)} 分`;
+  } else if (p2Wins > p1Wins) {
+    summary = `你的游戏记录是 ${p1Wins}:${p2Wins}，累计落后 ${Math.abs(netScore)} 分`;
+  } else {
+    summary = `你的游戏记录是 ${p1Wins}:${p2Wins}，累计平局`;
+  }
+
+  let html = `<h3>📊 游戏记录</h3><div class="gr-summary">${summary}</div>`;
+  for (const r of gameRecords) {
+    const wLabel = r.winner === 'p1' ? '玩家1' : r.winner === 'p2' ? '玩家2' : '平局';
+    const wClass = r.winner === 'p1' ? 'gr-win' : r.winner === 'p2' ? 'gr-lose' : 'gr-tie';
+    const ptsStr = r.points > 0 ? `赢${r.points}分` : '平局';
+    html += `<div class="gr-row"><span class="gr-num">第${r.gameNum}局</span> <span class="${wClass}">${wLabel}</span> <span class="gr-pts">${ptsStr}</span></div>`;
+  }
+  el.innerHTML = html;
+}
+
+function renderHistory() {
+  const el = document.getElementById('history-panel');
+  let html = '<h3>📜 最近回合</h3>';
+  if (state.history.length === 0) {
+    el.innerHTML = `${html}<div class="history-row"><span class="hr-round">暂无</span></div>`;
+    return;
+  }
+  for (const h of state.history) {
+    const wLabel = h.winner === 'p1' ? '<span class="hr-win">你胜</span>'
+                  : h.winner === 'p2' ? '<span class="hr-lose">AI胜</span>'
+                  : '<span class="hr-tie">平局</span>';
+    const pts = h.points > 0 ? ` <span class="hr-pts">+${h.points}分</span>` : '';
+    const p1c = cardToLabel(h.p1);
+    const p2c = cardToLabel(h.p2);
+    const p1Color = h.p1.color === 'red' ? 'hr-red' : h.p1.color === 'pink' ? 'hr-pink' : 'hr-black';
+    const p2Color = h.p2.color === 'red' ? 'hr-red' : h.p2.color === 'pink' ? 'hr-pink' : 'hr-black';
+    html += `<div class="history-row">
+      <span class="hr-round">R${h.round}</span>
+      <span class="hr-card ${p1Color}">${p1c}</span>
+      <span style="color:#666">vs</span>
+      <span class="hr-card ${p2Color}">${p2c}</span>
+      ${wLabel}${pts}
+    </div>`;
+  }
+  el.innerHTML = html;
+}
+
+// ── Card DOM Helpers ─────────────────────────────────────────────
+
+function makeCardEl(card, selectable = false, faceDown = false) {
+  const el = document.createElement('div');
+  el.classList.add('card');
+  if (faceDown) { el.classList.add('face-down'); return el; }
+  if (!card) return el;
+  el.classList.add(card.color || 'black');
+  if (selectable) el.classList.add('selectable');
+  if (isJoker(card)) {
+    el.innerHTML = `<span class="top">🃏</span><span class="suit" style="font-size:0.65rem">${card.rank}</span><span class="bottom">🃏</span>`;
+  } else {
+    el.innerHTML = `<span class="top">${card.rank}</span><span class="suit">${card.suit}</span><span class="bottom">${card.rank}</span>`;
+  }
+  return el;
+}
+
+function makeTableSlotEl(slot, selectable = false) {
+  const el = document.createElement('div');
+  el.classList.add('table-slot');
+  if (slot.down) {
+    const under = makeCardEl(null, false, true);
+    under.classList.add('under-card');
+    el.appendChild(under);
+  }
+  const faceEl = slot.face ? makeCardEl(slot.face, selectable) : makeEmptyEl();
+  faceEl.classList.add('face-card');
+  el.appendChild(faceEl);
+  return { el, faceEl };
+}
+
+function makeEmptyEl() {
+  const el = document.createElement('div');
+  el.classList.add('card', 'empty');
+  return el;
+}
+
+function setStatus(msg) {
+  document.getElementById('status-bar').textContent = msg;
+}
+
+// ── Game Logic ───────────────────────────────────────────────────
+
+function onCardClick(move) {
+  // P1 能选牌的条件：phase='select' 且（P1 先手 或 AI 已出牌等待回应）
+  if (state.phase !== 'select') return;
+  if (state.firstPlayer !== 1 && state.playedP2 === null) return;
+  const isSel = state.selectedSource &&
+    state.selectedSource.type === move.type &&
+    state.selectedSource.index === move.index;
+  state.selectedSource = isSel ? null : move;
+  renderAll();
+}
+
+function playTurn() {
+  if (state.phase !== 'select') return;
+  if (!state.selectedSource) { setStatus('请先选择一张牌！'); return; }
+
+  const isP1First = (state.firstPlayer === 1);
+
+  // P1 plays
+  state = applyMove(state, 'p1', state.selectedSource);
+  state.selectedSource = null;
+
+  // Track face-up index
+  if (state.playedP1Source && state.playedP1Source.type === 'face') {
+    // Face index tracking handled by resolveRound / advanceRound
+  }
+
+  // AI plays
+  if (isP1First) {
+    const aiMove = getBotMove(state.strategies.p2, state, 'p2', state.playedP1);
+    if (aiMove) state = applyMove(state, 'p2', aiMove);
+  }
+
+  // Resolve round
+  state = resolveRound(state);
+  renderAll();
+
+  if (!isTerminal(state)) {
+    autoAdvanceTimer = setTimeout(() => {
+      autoAdvanceTimer = null;
+      nextRound();
+    }, 3000);
+  } else {
+    // 最后一轮结束，推进到 gameover 状态
+    autoAdvanceTimer = setTimeout(() => {
+      autoAdvanceTimer = null;
+      state = advanceRound(state);
+      renderAll();
+    }, 3000);
+  }
+}
+
+function nextRound() {
+  if (autoAdvanceTimer) { clearTimeout(autoAdvanceTimer); autoAdvanceTimer = null; }
+  if (state.phase !== 'reveal') return;
+  state = advanceRound(state);
+  renderAll();
+
+  // AI goes first next round
+  if (state.firstPlayer === 2 && state.phase === 'select') {
+    const aiMove = getBotMove(state.strategies.p2, state, 'p2', null);
+    if (aiMove) {
+      state = applyMove(state, 'p2', aiMove);
+      renderAll();  // 显示 AI 出的牌，玩家才能决策跟牌
+    }
+  }
+}
+
+// ── Keyboard shortcut ───────────────────────────────────────────
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') playTurn();
+});
+
+// ── Init ─────────────────────────────────────────────────────────
+document.getElementById('btn-play').addEventListener('click', playTurn);
+document.getElementById('btn-continue').addEventListener('click', () => {
+  if (!state._recorded) {
+    state._recorded = true;
+    recordGameResult();
+  }
+  initGame();
+});
+document.getElementById('btn-restart').addEventListener('click', initGame);
+initGame();
+
+
+</script>
+</body>
+</html>
