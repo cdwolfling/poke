@@ -1,0 +1,20 @@
+# result files (test output, logs, screenshots, etc.)
+result/
+results/
+**/result/
+**/results/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Node
+node_modules/
+npm-debug.log*
