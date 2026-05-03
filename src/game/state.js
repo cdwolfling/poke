@@ -207,6 +207,18 @@ function advanceRound(state) {
     }
   }
 
+  // If hand is empty, flip all remaining down cards to face-up
+  for (const pid of ['p1', 'p2']) {
+    if (ns[pid].hand.length === 0) {
+      for (const slot of ns[pid].table) {
+        if (slot.down && !slot.face) {
+          slot.face = slot.down;
+          slot.down = null;
+        }
+      }
+    }
+  }
+
   // Clear round-specific fields
   ns.playedP1 = null;
   ns.playedP2 = null;
