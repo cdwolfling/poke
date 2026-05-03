@@ -241,17 +241,14 @@
     .history-row .hr-card {
       display: inline-flex; align-items: center; gap: 3px;
       font-size: 0.78rem; font-weight: bold;
-      background: rgba(255,255,255,0.12); border-radius: 4px; padding: 1px 6px;
+      background: rgba(255,255,255,0.15); border-radius: 4px; padding: 1px 6px;
     }
-    .history-row .hr-card.joker-big { color: #c0392b; }
-    .history-row .hr-card.joker-small { color: #1a1a1a; }
-    .history-row .hr-card.red { color: #c0392b; }
-    .history-row .hr-card.pink { color: #d63384; }
-    .history-row .hr-card.dark { color: #1a5b3a; }
-    .history-row .hr-card.black { color: #aaa; }
-    .history-row .hr-win  { color: #f1c40f; font-weight: bold; min-width: 50px; }
-    .history-row .hr-lose { color: #e74c3c; font-weight: bold; min-width: 50px; }
-    .history-row .hr-tie  { color: #888; min-width: 50px; }
+    .history-row .hr-red { color: #ff6b6b; }
+    .history-row .hr-pink { color: #ff8ec7; }
+    .history-row .hr-black { color: #ddd; }
+    .history-row .hr-win  { color: #ffd700; font-weight: bold; min-width: 50px; }
+    .history-row .hr-lose { color: #ff6b6b; font-weight: bold; min-width: 50px; }
+    .history-row .hr-tie  { color: #aaa; min-width: 50px; }
     .history-row .hr-pts {
       font-size: 0.7rem; color: #2ecc71; background: rgba(46,204,113,0.15);
       border-radius: 3px; padding: 0 4px;
@@ -359,6 +356,7 @@
         <div id="result-banner">——</div>
         <div id="status-bar">等待开始……</div>
         <div id="btn-area">
+          <button id="btn-continue" style="display:none;background:#2ecc71;color:#fff">继续游戏</button>
           <button id="btn-restart">重新开始</button>
         </div>
       </div>

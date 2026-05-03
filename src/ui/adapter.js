@@ -14,11 +14,14 @@ import { getBotMove } from './ai/bot.js';
 let state = null;
 let autoAdvanceTimer = null;
 let gameRecords = []; // { gameNum, winner, p1Score, p2Score, points }
+let nextFirstPlayer = null; // 上一局获胜者，下一局先手
 
 // ── Init ─────────────────────────────────────────────────────────
 function initGame() {
   if (autoAdvanceTimer) { clearTimeout(autoAdvanceTimer); autoAdvanceTimer = null; }
-  state = createState({ p1: 'V1', p2: 'V3' });
+  const opts = { p1: 'V1', p2: 'V3' };
+  if (nextFirstPlayer) opts.firstPlayer = nextFirstPlayer;
+  state = createState(opts);
   document.getElementById('btn-play').disabled = true;
   renderAll();
 }
@@ -184,10 +187,22 @@ function renderStatus() {
 
 function renderButtons() {
   const bp = document.getElementById('btn-play');
+  const bc = document.getElementById('btn-continue');
+  const br = document.getElementById('btn-restart');
   if (state.phase === 'select') {
     bp.style.display = '';
     bp.disabled = !state.selectedSource;
-  } else bp.style.display = 'none';
+    bc.style.display = 'none';
+    br.style.display = '';
+  } else if (state.phase === 'gameover') {
+    bp.style.display = 'none';
+    bc.style.display = '';
+    br.style.display = '';
+  } else {
+    bp.style.display = 'none';
+    bc.style.display = 'none';
+    br.style.display = '';
+  }
 }
 
 function recordGameResult() {
@@ -198,6 +213,10 @@ function recordGameResult() {
   else if (p2 > p1) { winner = 'p2'; points = p2 - p1; }
   else { winner = 'tie'; points = 0; }
   gameRecords.push({ gameNum: gameRecords.length + 1, winner, p1Score: p1, p2Score: p2, points });
+  // 下一局先手为获胜者，平局不交换
+  if (winner === 'p1') nextFirstPlayer = 1;
+  else if (winner === 'p2') nextFirstPlayer = 2;
+  // tie: nextFirstPlayer 保持不变（null 或上局设置的值）
 }
 
 function renderGameRecords() {
@@ -246,11 +265,13 @@ function renderHistory() {
     const pts = h.points > 0 ? ` <span class="hr-pts">+${h.points}分</span>` : '';
     const p1c = cardToLabel(h.p1);
     const p2c = cardToLabel(h.p2);
+    const p1Color = h.p1.color === 'red' ? 'hr-red' : h.p1.color === 'pink' ? 'hr-pink' : 'hr-black';
+    const p2Color = h.p2.color === 'red' ? 'hr-red' : h.p2.color === 'pink' ? 'hr-pink' : 'hr-black';
     html += `<div class="history-row">
       <span class="hr-round">R${h.round}</span>
-      <span class="hr-card ${h.p1.color || ''}">${p1c}</span>
-      <span style="color:#888">vs</span>
-      <span class="hr-card ${h.p2.color || ''}">${p2c}</span>
+      <span class="hr-card ${p1Color}">${p1c}</span>
+      <span style="color:#666">vs</span>
+      <span class="hr-card ${p2Color}">${p2c}</span>
       ${wLabel}${pts}
     </div>`;
   }
@@ -340,7 +361,7 @@ function playTurn() {
     autoAdvanceTimer = setTimeout(() => {
       autoAdvanceTimer = null;
       nextRound();
-    }, 1500);
+    }, 3000);
   }
 }
 
@@ -367,5 +388,12 @@ document.addEventListener('keydown', (e) => {
 
 // ── Init ─────────────────────────────────────────────────────────
 document.getElementById('btn-play').addEventListener('click', playTurn);
+document.getElementById('btn-continue').addEventListener('click', () => {
+  if (!state._recorded) {
+    state._recorded = true;
+    recordGameResult();
+  }
+  initGame();
+});
 document.getElementById('btn-restart').addEventListener('click', initGame);
 initGame();
