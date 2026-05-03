@@ -98,10 +98,10 @@ git push
 # 先 build
 node build.mjs
 
-# 上传到 FTP
+# 上传到 FTP（需先在 .env 或 ftp 客户端配置好凭据）
 curl -T CouplesCardGame-v3.html \
-  "ftp://139.129.141.4/htdocs/html/Couple/CouplesCardGame-v3.html" \
-  --user qxu1591260323:qwerasdf1 --disable-epsv
+  "ftp://<host>/htdocs/html/Couple/CouplesCardGame-v3.html" \
+  --user <username>:<password> --disable-epsv
 ```
 
 线上地址：<http://applechen.cn/html/Couple/CouplesCardGame-v3.html>
